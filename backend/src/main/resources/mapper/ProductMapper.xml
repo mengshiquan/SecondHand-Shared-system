@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.secondhand.mapper.ProductMapper">
+
+    <resultMap id="ProductVOMap" type="com.campus.secondhand.vo.ProductVO">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="price" column="price"/>
+        <result property="originalPrice" column="original_price"/>
+        <result property="images" column="images" typeHandler="com.campus.secondhand.config.handler.JsonListTypeHandler"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="categoryName" column="category_name"/>
+        <result property="userId" column="user_id"/>
+        <result property="sellerName" column="seller_name"/>
+        <result property="sellerAvatar" column="seller_avatar"/>
+        <result property="status" column="status"/>
+        <result property="viewCount" column="view_count"/>
+        <result property="favorited" column="favorited"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <select id="selectProductPage" resultMap="ProductVOMap">
+        SELECT p.id, p.title, p.description, p.price, p.original_price, p.images,
+               p.category_id, c.name AS category_name, p.user_id,
+               u.nickname AS seller_name, u.avatar AS seller_avatar,
+               p.status, p.view_count, p.create_time,
+               <if test="query.currentUserId != null">
+                   IF(f.id IS NOT NULL, 1, 0) AS favorited
+               </if>
+               <if test="query.currentUserId == null">
+                   0 AS favorited
+               </if>
+        FROM t_product p
+        LEFT JOIN t_category c ON p.category_id = c.id
+        LEFT JOIN t_user u ON p.user_id = u.id
+        <if test="query.currentUserId != null">
+            LEFT JOIN t_favorite f ON f.product_id = p.id AND f.user_id = #{query.currentUserId} AND f.deleted = 0
+        </if>
+        WHERE p.deleted = 0
+        <if test="query.keyword != null and query.keyword != ''">
+            AND (p.title LIKE CONCAT('%', #{query.keyword}, '%')
+                 OR p.description LIKE CONCAT('%', #{query.keyword}, '%'))
+        </if>
+        <if test="query.categoryId != null">
+            AND p.category_id = #{query.categoryId}
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND p.status = #{query.status}
+        </if>
+        <if test="query.sellerId != null">
+            AND p.user_id = #{query.sellerId}
+        </if>
+        ORDER BY p.create_time DESC
+    </select>
+
+    <select id="selectProductDetail" resultMap="ProductVOMap">
+        SELECT p.id, p.title, p.description, p.price, p.original_price, p.images,
+               p.category_id, c.name AS category_name, p.user_id,
+               u.nickname AS seller_name, u.avatar AS seller_avatar,
+               p.status, p.view_count, p.create_time,
+               <if test="userId != null">
+                   IF(f.id IS NOT NULL, 1, 0) AS favorited
+               </if>
+               <if test="userId == null">
+                   0 AS favorited
+               </if>
+        FROM t_product p
+        LEFT JOIN t_category c ON p.category_id = c.id
+        LEFT JOIN t_user u ON p.user_id = u.id
+        <if test="userId != null">
+            LEFT JOIN t_favorite f ON f.product_id = p.id AND f.user_id = #{userId} AND f.deleted = 0
+        </if>
+        WHERE p.id = #{id} AND p.deleted = 0
+    </select>
+</mapper>

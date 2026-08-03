@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.secondhand.mapper.OrderMapper">
+
+    <select id="selectOrderPage" resultType="com.campus.secondhand.vo.OrderVO">
+        SELECT o.id, o.order_no, o.product_id, p.title AS product_title,
+               JSON_UNQUOTE(JSON_EXTRACT(p.images, '$[0]')) AS product_image,
+               o.buyer_id, o.buyer_name, o.buyer_phone, o.buyer_address,
+               bu.nickname AS buyer_nickname,
+               o.seller_id, su.nickname AS seller_name,
+               o.price, o.status, o.remark, o.expire_time,
+               o.create_time, o.update_time
+        FROM t_order o
+        LEFT JOIN t_product p ON o.product_id = p.id
+        LEFT JOIN t_user bu ON o.buyer_id = bu.id
+        LEFT JOIN t_user su ON o.seller_id = su.id
+        WHERE o.deleted = 0
+        <if test="role != 'ADMIN'">
+            AND (o.buyer_id = #{userId} OR o.seller_id = #{userId})
+        </if>
+        <if test="status != null and status != ''">
+            AND o.status = #{status}
+        </if>
+        ORDER BY o.create_time DESC
+    </select>
+
+    <select id="selectOrderDetail" resultType="com.campus.secondhand.vo.OrderVO">
+        SELECT o.id, o.order_no, o.product_id, p.title AS product_title,
+               JSON_UNQUOTE(JSON_EXTRACT(p.images, '$[0]')) AS product_image,
+               o.buyer_id, o.buyer_name, o.buyer_phone, o.buyer_address,
+               bu.nickname AS buyer_nickname,
+               o.seller_id, su.nickname AS seller_name,
+               o.price, o.status, o.remark, o.expire_time,
+               o.create_time, o.update_time
+        FROM t_order o
+        LEFT JOIN t_product p ON o.product_id = p.id
+        LEFT JOIN t_user bu ON o.buyer_id = bu.id
+        LEFT JOIN t_user su ON o.seller_id = su.id
+        WHERE o.id = #{id} AND o.deleted = 0
+    </select>
+</mapper>

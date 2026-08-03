@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campus.secondhand.mapper.FavoriteMapper">
+
+    <select id="selectFavoritePage" resultMap="com.campus.secondhand.mapper.ProductMapper.ProductVOMap">
+        SELECT p.id, p.title, p.description, p.price, p.original_price, p.images,
+               p.category_id, c.name AS category_name, p.user_id,
+               u.nickname AS seller_name, u.avatar AS seller_avatar,
+               p.status, p.view_count, p.create_time, 1 AS favorited
+        FROM t_favorite f
+        INNER JOIN t_product p ON f.product_id = p.id AND p.deleted = 0
+        LEFT JOIN t_category c ON p.category_id = c.id
+        LEFT JOIN t_user u ON p.user_id = u.id
+        WHERE f.user_id = #{userId} AND f.deleted = 0
+        ORDER BY f.create_time DESC
+    </select>
+</mapper>

@@ -1,0 +1,98 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif;
+  background: #F0F9F4;
+  color: #1F2937;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* ========== Element Plus 主题色覆盖 ========== */
+:root {
+  --el-color-primary: #10B981;
+  --el-color-primary-light-3: #6EE7B7;
+  --el-color-primary-light-5: #A7F3D0;
+  --el-color-primary-light-7: #D1FAE5;
+  --el-color-primary-light-8: #ECFDF5;
+  --el-color-primary-light-9: #F0FDF4;
+  --el-color-primary-dark-2: #059669;
+  --el-color-success: #10B981;
+  --el-color-warning: #F59E0B;
+  --el-color-danger: #EF4444;
+  --el-color-info: #6B7280;
+  --el-border-radius-base: 8px;
+  --el-font-size-base: 15px;
+  --el-menu-hover-bg-color: #ECFDF5;
+
+  /* 响应式断点 */
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+}
+
+/* ========== 布局 ========== */
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+/* 平板端缩小页面边距 */
+@media (max-width: 768px) {
+  .page-container { padding: 14px; }
+}
+/* 手机端进一步缩小 */
+@media (max-width: 480px) {
+  .page-container { padding: 10px; }
+}
+
+/* ========== 卡片悬浮 ========== */
+.card-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.12);
+}
+
+/* ========== 排版工具类 ========== */
+.text-price {
+  font-family: 'Inter', 'PingFang SC', sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #F59E0B;
+}
+
+.text-muted {
+  color: #6B7280;
+  font-size: 13px;
+}
+
+/* ========== 响应式工具类 ========== */
+/* 平板端(≤1024px)隐藏 */
+@media (max-width: 1024px) {
+  .hide-tablet { display: none !important; }
+}
+/* 手机端(≤768px)隐藏/显示 */
+.show-mobile { display: none; }
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block; }
+}
+
+/* ========== 焦点可见性 (可访问性) ========== */
+:focus-visible {
+  outline: 2px solid #10B981;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

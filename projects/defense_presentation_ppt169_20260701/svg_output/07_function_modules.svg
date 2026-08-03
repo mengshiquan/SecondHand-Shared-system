@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="1280" height="80" fill="#F8FAFC"/>
+  <text x="640" y="55" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="56" font-weight="bold" fill="#1E293B">系统功能模块</text>
+  <rect x="60" y="100" width="1160" height="4" fill="#1565C0"/>
+  <rect x="60" y="140" width="360" height="280" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="60" y="140" width="12" height="56" fill="#1565C0"/>
+  <text x="90" y="180" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="40" font-weight="bold" fill="#1E293B">用户模块</text>
+  <text x="90" y="220" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 用户注册（用户名+密码+昵称）</text>
+  <text x="90" y="255" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 用户登录（JWT令牌认证）</text>
+  <text x="90" y="290" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 个人资料管理</text>
+  <text x="90" y="325" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 修改密码</text>
+  <rect x="60" y="200" width="20" height="20" rx="4" fill="#1565C0"/>
+  <rect x="640" y="140" width="360" height="280" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="640" y="140" width="12" height="56" fill="#1976D2"/>
+  <text x="670" y="180" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="40" font-weight="bold" fill="#1E293B">商品模块</text>
+  <text x="670" y="220" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 发布商品（标题、描述、价格、分类、图片）</text>
+  <text x="670" y="255" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 编辑/删除/下架商品</text>
+  <text x="670" y="290" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 商品列表（分页+搜索+分类筛选）</text>
+  <text x="670" y="325" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 商品详情（浏览量统计）</text>
+  <rect x="1020" y="140" width="360" height="280" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="1020" y="140" width="12" height="56" fill="#0D47A1"/>
+  <text x="1050" y="180" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="40" font-weight="bold" fill="#1E293B">订单模块</text>
+  <text x="1050" y="220" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 创建订单（买家下单）</text>
+  <text x="1050" y="255" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 订单状态流转</text>
+  <text x="1090" y="285" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" fill="#64748B">待付款→已付款→已发货→已完成</text>
+  <text x="1050" y="315" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 取消订单（商品自动恢复上架）</text>
+  <text x="1050" y="350" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 订单列表（按状态分类展示）</text>
+  <rect x="60" y="440" width="280" height="180" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="200" y="480" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="36" font-weight="bold" fill="#1E293B">收藏模块</text>
+  <text x="90" y="520" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 收藏/取消收藏商品</text>
+  <text x="90" y="555" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 收藏列表查看</text>
+  <rect x="360" y="440" width="280" height="180" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="500" y="480" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="36" font-weight="bold" fill="#1E293B">评论模块</text>
+  <text x="360" y="520" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 发表评论（1-5星评分）</text>
+  <text x="360" y="555" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 商品评论列表</text>
+  <rect x="660" y="440" width="560" height="180" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="660" y="440" width="12" height="56" fill="#10B981"/>
+  <text x="690" y="480" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="36" font-weight="bold" fill="#1E293B">后台管理模块</text>
+  <text x="690" y="520" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 数据概览（总用户数、总商品数、总订单数）</text>
+  <text x="690" y="555" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">• 用户管理、商品管理、订单管理、分类管理</text>
+  <text x="1200" y="700" text-anchor="end" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="19" fill="#94A3B8">7/10</text>
+</svg>

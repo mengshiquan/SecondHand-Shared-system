@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="1280" height="80" fill="#F8FAFC"/>
+  <text x="640" y="55" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="56" font-weight="bold" fill="#1E293B">核心业务流程</text>
+  <rect x="60" y="100" width="1160" height="4" fill="#1565C0"/>
+  <rect x="60" y="140" width="1160" height="160" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="60" y="140" width="12" height="56" fill="#1565C0"/>
+  <text x="90" y="180" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="40" font-weight="bold" fill="#1E293B">用户认证流程</text>
+  <rect x="90" y="210" width="180" height="40" rx="6" fill="#1565C0"/>
+  <text x="180" y="238" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">用户提交用户名+密码</text>
+  <polygon points="270,230 290,230 280,220" fill="#1565C0"/>
+  <rect x="310" y="210" width="180" height="40" rx="6" fill="#1976D2"/>
+  <text x="400" y="238" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">服务端验证密码</text>
+  <polygon points="490,230 510,230 500,220" fill="#1976D2"/>
+  <rect x="530" y="210" width="180" height="40" rx="6" fill="#0D47A1"/>
+  <text x="620" y="238" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">生成JWT Token</text>
+  <polygon points="710,230 730,230 720,220" fill="#0D47A1"/>
+  <rect x="750" y="210" width="180" height="40" rx="6" fill="#1565C0"/>
+  <text x="840" y="238" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">前端存储Token</text>
+  <polygon points="930,230 950,230 940,220" fill="#1565C0"/>
+  <rect x="970" y="210" width="170" height="40" rx="6" fill="#10B981"/>
+  <text x="1055" y="238" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">后续请求自动附加Token</text>
+  <rect x="60" y="320" width="1160" height="200" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="60" y="320" width="12" height="56" fill="#1976D2"/>
+  <text x="90" y="360" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="40" font-weight="bold" fill="#1E293B">订单状态流转</text>
+  <rect x="120" y="400" width="140" height="40" rx="6" fill="#EF4444"/>
+  <text x="190" y="428" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">待付款(PENDING)</text>
+  <polygon points="260,420 280,420 270,410" fill="#EF4444"/>
+  <rect x="300" y="400" width="140" height="40" rx="6" fill="#F59E0B"/>
+  <text x="370" y="428" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">已付款(PAID)</text>
+  <polygon points="440,420 460,420 450,410" fill="#F59E0B"/>
+  <rect x="480" y="400" width="140" height="40" rx="6" fill="#1565C0"/>
+  <text x="550" y="428" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">已发货(SHIPPED)</text>
+  <polygon points="620,420 640,420 630,410" fill="#1565C0"/>
+  <rect x="660" y="400" width="140" height="40" rx="6" fill="#10B981"/>
+  <text x="730" y="428" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">已完成(COMPLETED)</text>
+  <polygon points="190,440 190,470 180,460" fill="#EF4444"/>
+  <rect x="120" y="490" width="140" height="40" rx="6" fill="#64748B"/>
+  <text x="190" y="518" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF">已取消(CANCELLED)</text>
+  <text x="280" y="500" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="20" fill="#64748B">买家取消或超时</text>
+  <rect x="60" y="540" width="1160" height="100" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="60" y="540" width="12" height="56" fill="#0D47A1"/>
+  <text x="90" y="580" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="40" font-weight="bold" fill="#1E293B">商品发布流程</text>
+  <rect x="90" y="610" width="180" height="30" rx="4" fill="#1565C0"/>
+  <text x="180" y="632" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF">用户上传图片</text>
+  <polygon points="270,625 285,625 277,618" fill="#1565C0"/>
+  <rect x="295" y="610" width="180" height="30" rx="4" fill="#1976D2"/>
+  <text x="385" y="632" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF">填写商品信息</text>
+  <polygon points="475,625 490,625 482,618" fill="#1976D2"/>
+  <rect x="500" y="610" width="180" height="30" rx="4" fill="#0D47A1"/>
+  <text x="590" y="632" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF">设置分类和价格</text>
+  <polygon points="680,625 695,625 687,618" fill="#0D47A1"/>
+  <rect x="705" y="610" width="180" height="30" rx="4" fill="#10B981"/>
+  <text x="795" y="632" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF">保存发布(ON_SALE)</text>
+  <text x="1200" y="700" text-anchor="end" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="19" fill="#94A3B8">9/10</text>
+</svg>

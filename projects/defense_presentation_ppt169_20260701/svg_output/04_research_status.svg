@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <rect width="1280" height="720" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="1280" height="80" fill="#F8FAFC"/>
+  <text x="640" y="55" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="56" font-weight="bold" fill="#1E293B">国内外研究现状</text>
+  <rect x="60" y="100" width="1160" height="4" fill="#1565C0"/>
+  <rect x="60" y="140" width="1160" height="180" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="60" y="140" width="12" height="56" fill="#1565C0"/>
+  <text x="90" y="180" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="40" font-weight="bold" fill="#1E293B">现状分析</text>
+  <text x="90" y="220" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="32" fill="#1E293B">• 国内外二手交易平台发展迅速</text>
+  <text x="130" y="255" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" fill="#64748B">闲鱼、转转、Facebook Marketplace 等</text>
+  <text x="90" y="290" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="32" fill="#1E293B">• 专门针对校园场景的二手交易系统研究相对较少</text>
+  <text x="90" y="325" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="32" fill="#1E293B">• 主流平台面向全年龄段用户，校园场景特殊性未得到关注</text>
+  <rect x="60" y="340" width="1160" height="180" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+  <rect x="60" y="340" width="12" height="56" fill="#1976D2"/>
+  <text x="90" y="380" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="40" font-weight="bold" fill="#1E293B">校园二手交易特点</text>
+  <rect x="90" y="410" width="260" height="100" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="220" y="445" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" font-weight="bold" fill="#1565C0">用户群体封闭</text>
+  <text x="220" y="475" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="22" fill="#64748B">仅限校内师生</text>
+  <rect x="370" y="410" width="260" height="100" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="500" y="445" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" font-weight="bold" fill="#1565C0">商品刚需为主</text>
+  <text x="500" y="475" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="22" fill="#64748B">教材、电子产品、生活用品</text>
+  <rect x="650" y="410" width="260" height="100" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="780" y="445" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" font-weight="bold" fill="#1565C0">交易金额低</text>
+  <text x="780" y="475" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="22" fill="#64748B">普遍较低</text>
+  <rect x="930" y="410" width="260" height="100" rx="8" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="1060" y="445" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="28" font-weight="bold" fill="#1565C0">信任易建立</text>
+  <text x="1060" y="475" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="22" fill="#64748B">用户间信任关系相对容易</text>
+  <rect x="60" y="540" width="1160" height="100" rx="12" fill="#E3F2FD" stroke="#1565C0" stroke-width="2"/>
+  <text x="90" y="580" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="32" font-weight="bold" fill="#1565C0">本课题研究目标：</text>
+  <text x="350" y="580" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="32" fill="#1E293B">针对现有痛点，设计与实现一套专门的校园二手物品共享平台</text>
+  <text x="1200" y="700" text-anchor="end" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="19" fill="#94A3B8">4/10</text>
+</svg>

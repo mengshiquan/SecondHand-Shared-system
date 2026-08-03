@@ -1,0 +1,689 @@
+<template>
+  <div class="admin page-container">
+    <div class="page-header">
+      <h1 class="page-title">后台管理</h1>
+      <p class="page-sub">管理平台用户、商品、订单和分类</p>
+    </div>
+
+    <el-tabs v-model="activeTab" class="admin-tabs">
+      <!-- 仪表盘 -->
+      <el-tab-pane name="dashboard">
+        <template #label><el-icon><DataAnalysis /></el-icon> 数据概览</template>
+        <el-row :gutter="20" v-if="dashboard">
+          <el-col :xs="12" :sm="6">
+            <div class="stat-card stat-users" shadow="hover">
+              <div class="stat-icon-bg"><el-icon :size="24"><User /></el-icon></div>
+              <div class="stat-value">{{ dashboard.userCount }}</div>
+              <div class="stat-label">用户总数</div>
+            </div>
+          </el-col>
+          <el-col :xs="12" :sm="6">
+            <div class="stat-card stat-products">
+              <div class="stat-icon-bg"><el-icon :size="24"><Goods /></el-icon></div>
+              <div class="stat-value">{{ dashboard.productCount }}</div>
+              <div class="stat-label">商品总数</div>
+            </div>
+          </el-col>
+          <el-col :xs="12" :sm="6">
+            <div class="stat-card stat-orders">
+              <div class="stat-icon-bg"><el-icon :size="24"><Document /></el-icon></div>
+              <div class="stat-value">{{ dashboard.orderCount }}</div>
+              <div class="stat-label">订单总数</div>
+            </div>
+          </el-col>
+          <el-col :xs="12" :sm="6">
+            <div class="stat-card stat-today">
+              <div class="stat-icon-bg"><el-icon :size="24"><TrendCharts /></el-icon></div>
+              <div class="stat-value">{{ dashboard.todayOrderCount }}</div>
+              <div class="stat-label">今日订单</div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <el-row v-if="activeTab === 'dashboard'" :gutter="20" style="margin-top: 20px">
+          <el-col :xs="24" :lg="12">
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <span class="chart-title">商品分类分布</span>
+              </div>
+              <div id="pieChartBox" class="chart-box"></div>
+            </div>
+          </el-col>
+          <el-col :xs="24" :lg="12">
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <span class="chart-title">订单状态分布</span>
+              </div>
+              <div id="barChartBox" class="chart-box"></div>
+            </div>
+          </el-col>
+        </el-row>
+      </el-tab-pane>
+
+      <!-- 用户管理 -->
+      <el-tab-pane name="users">
+        <template #label><el-icon><User /></el-icon> 用户管理</template>
+        <div class="table-card">
+          <div class="table-header">
+            <span>共 <strong>{{ users.length }}</strong> 个用户</span>
+          </div>
+          <el-table :data="users" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="username" label="用户名" />
+            <el-table-column prop="nickname" label="昵称" />
+            <el-table-column prop="role" label="角色" width="100" />
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'danger'" effect="plain">
+                  {{ row.status === 1 ? '正常' : '禁用' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button
+                  size="small"
+                  :type="row.status === 1 ? 'danger' : 'success'"
+                  @click="toggleUserStatus(row)"
+                >{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-tab-pane>
+
+      <!-- 商品管理 -->
+      <el-tab-pane name="products">
+        <template #label><el-icon><Goods /></el-icon> 商品管理</template>
+        <div class="table-card">
+          <div class="table-header">
+            <span>共 <strong>{{ adminProducts.length }}</strong> 件商品</span>
+          </div>
+          <el-table :data="adminProducts" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="title" label="标题" show-overflow-tooltip />
+            <el-table-column prop="price" label="价格" width="100" />
+            <el-table-column prop="sellerName" label="卖家" />
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="productStatusType(row.status)" effect="plain">
+                  {{ productStatusText(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="100">
+              <template #default="{ row }">
+                <el-button size="small" type="danger" plain @click="handleDeleteProduct(row.id)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-tab-pane>
+
+      <!-- 订单管理 -->
+      <el-tab-pane name="orders">
+        <template #label><el-icon><Document /></el-icon> 订单管理</template>
+        <div class="table-card">
+          <div class="table-header">
+            <span>共 <strong>{{ adminOrders.length }}</strong> 笔订单</span>
+          </div>
+          <el-table :data="adminOrders" stripe>
+            <el-table-column prop="orderNo" label="订单号" show-overflow-tooltip />
+            <el-table-column prop="productTitle" label="商品" show-overflow-tooltip />
+            <el-table-column prop="price" label="金额" width="100" />
+            <el-table-column prop="status" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="orderStatusType(row.status)" effect="plain">
+                  {{ orderStatusText(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="创建时间" width="180" />
+          </el-table>
+        </div>
+      </el-tab-pane>
+
+      <!-- 分类管理 -->
+      <el-tab-pane name="categories">
+        <template #label><el-icon><Grid /></el-icon> 分类管理</template>
+        <div class="table-card">
+          <div class="table-header">
+            <span>共 <strong>{{ categories.length }}</strong> 个分类</span>
+            <el-button type="primary" size="small" :icon="Plus" @click="openCategoryDialog()">新增分类</el-button>
+          </div>
+          <el-table :data="categories" stripe>
+            <el-table-column prop="id" label="ID" width="80" />
+            <el-table-column prop="name" label="名称" />
+            <el-table-column prop="sort" label="排序" width="80" />
+            <el-table-column label="操作" width="160">
+              <template #default="{ row }">
+                <el-button size="small" @click="openCategoryDialog(row)">编辑</el-button>
+                <el-button size="small" type="danger" plain @click="handleDeleteCategory(row.id)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-tab-pane>
+
+      <!-- 小黑屋 -->
+      <el-tab-pane name="blacklist">
+        <template #label><el-icon><WarningFilled /></el-icon> 小黑屋</template>
+        <div class="table-card">
+          <div class="table-header">
+            <span>共 <strong>{{ blacklistTotal }}</strong> 个受限用户</span>
+            <div style="display:flex;gap:8px">
+              <el-button size="small" @click="loadBlacklist">刷新</el-button>
+              <el-button size="small" type="primary" @click="triggerScan" :loading="scanning">手动扫描</el-button>
+            </div>
+          </div>
+          <el-table :data="blacklistUsers" stripe>
+            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="nickname" label="昵称" width="120" />
+            <el-table-column label="拉黑方式" width="100">
+              <template #default="{ row }">
+                <el-tag :type="row.blacklistStatus === 'AUTO' ? 'warning' : 'danger'" size="small">
+                  {{ row.blacklistStatus === 'AUTO' ? '系统自动' : '管理员' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="blacklistReason" label="拉黑原因" min-width="200" show-overflow-tooltip />
+            <el-table-column label="解封时间" width="170">
+              <template #default="{ row }">{{ formatTime(row.blacklistUntil) }}</template>
+            </el-table-column>
+            <el-table-column label="历史次数" width="80" prop="blacklistCount" />
+            <el-table-column label="操作" width="100">
+              <template #default="{ row }">
+                <el-button size="small" type="success" @click="handleUnblacklist(row.id)">解封</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-tab-pane>
+
+      <!-- 投诉 / 申诉 -->
+      <el-tab-pane name="reports">
+        <template #label><el-icon><Bell /></el-icon> 投诉 / 申诉</template>
+        <el-tabs v-model="reportSubTab" type="card" style="margin-top:0">
+          <el-tab-pane name="complaints" label="投诉列表" />
+          <el-tab-pane name="appeals" label="申诉列表" />
+        </el-tabs>
+
+        <!-- 投诉列表 -->
+        <div v-if="reportSubTab === 'complaints'" class="table-card" style="margin-top:12px">
+          <el-table :data="complaints" stripe>
+            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="targetUserId" label="被投诉人ID" width="100" />
+            <el-table-column prop="reporterId" label="投诉人ID" width="100" />
+            <el-table-column prop="reason" label="原因" width="120" />
+            <el-table-column prop="description" label="描述" min-width="180" show-overflow-tooltip />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="reportStatusType(row.status)" size="small">{{ reportStatusText(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="160">
+              <template #default="{ row }">
+                <template v-if="row.status === 'PENDING'">
+                  <el-button size="small" type="primary" @click="handleReport(row, 'complaint', true)">通过</el-button>
+                  <el-button size="small" @click="handleReport(row, 'complaint', false)">驳回</el-button>
+                </template>
+                <span v-else class="text-muted">已处理</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <!-- 申诉列表 -->
+        <div v-if="reportSubTab === 'appeals'" class="table-card" style="margin-top:12px">
+          <el-table :data="appeals" stripe>
+            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="userId" label="申诉人ID" width="100" />
+            <el-table-column prop="reason" label="申诉理由" min-width="200" show-overflow-tooltip />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="reportStatusType(row.status)" size="small">{{ reportStatusText(row.status) }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="160">
+              <template #default="{ row }">
+                <template v-if="row.status === 'PENDING'">
+                  <el-button size="small" type="primary" @click="handleReport(row, 'appeal', true)">通过</el-button>
+                  <el-button size="small" @click="handleReport(row, 'appeal', false)">驳回</el-button>
+                </template>
+                <span v-else class="text-muted">已处理</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
+
+    <!-- 分类编辑弹窗 -->
+    <el-dialog v-model="categoryDialogVisible" :title="categoryForm.id ? '编辑分类' : '新增分类'" width="400px">
+      <el-form :model="categoryForm" label-width="60px">
+        <el-form-item label="名称">
+          <el-input v-model="categoryForm.name" />
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-input-number v-model="categoryForm.sort" :min="0" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="categoryDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveCategoryForm">保存</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { DataAnalysis, Grid, Plus, WarningFilled, Bell } from '@element-plus/icons-vue'
+import * as echarts from 'echarts'
+import {
+  getDashboard, getAdminUsers, updateUserStatus,
+  getAdminProducts, getAdminOrders, saveCategory, deleteCategory,
+  getBlacklist, unblacklistUser, triggerBlacklistScan,
+  getAdminComplaints, handleComplaint,
+  getAdminAppeals, handleAppeal
+} from '@/api/admin'
+import { getCategoryList } from '@/api/category'
+import { deleteProduct } from '@/api/product'
+
+const activeTab = ref('dashboard')
+const dashboard = ref(null)
+const users = ref([])
+const adminProducts = ref([])
+const adminOrders = ref([])
+const categories = ref([])
+
+const categoryDialogVisible = ref(false)
+const categoryForm = reactive({ id: null, name: '', sort: 0 })
+
+// 小黑屋
+const blacklistUsers = ref([])
+const blacklistTotal = ref(0)
+const scanning = ref(false)
+
+// 投诉/申诉
+const reportSubTab = ref('complaints')
+const complaints = ref([])
+const appeals = ref([])
+
+let pieChart = null
+let barChart = null
+
+async function loadDashboard() {
+  const res = await getDashboard()
+  dashboard.value = res.data
+}
+
+async function loadDashboardData() {
+  // 先等数据：仪表盘 + 订单 + 商品列表（用于提取分类统计）
+  await Promise.all([loadDashboard(), loadAdminOrders(), loadAdminProducts()])
+  // 等 Vue 完成渲染（v-if + el-tabs 需要更多时间）
+  await nextTick()
+  // 用 setTimeout 确保 DOM 元素已挂载且有尺寸
+  await new Promise(r => setTimeout(r, 100))
+  renderCharts()
+}
+
+function renderCharts() {
+  const pieBox = document.getElementById('pieChartBox')
+  const barBox = document.getElementById('barChartBox')
+
+  if (pieBox) initPieChart(pieBox)
+  if (barBox) initBarChart(barBox)
+}
+
+function initPieChart(dom) {
+  if (pieChart) pieChart.dispose()
+  if (!dom || dom.offsetParent === null) {
+    console.warn('pieChartBox not visible, retrying...')
+    setTimeout(() => renderCharts(), 200)
+    return
+  }
+
+  // 从商品列表中提取各分类数量（无需额外后端接口）
+  const catMap = {}
+  for (const p of (adminProducts.value || [])) {
+    const name = p.categoryName || '未分类'
+    catMap[name] = (catMap[name] || 0) + 1
+  }
+  const data = Object.entries(catMap).map(([name, value]) => ({ name, value }))
+
+  pieChart = echarts.init(dom)
+  if (data.length === 0) {
+    pieChart.setOption({
+      title: { text: '暂无商品数据', left: 'center', top: 'center', textStyle: { color: '#9CA3AF', fontSize: 14 } }
+    })
+    return
+  }
+
+  pieChart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c} 件 ({d}%)' },
+    legend: { bottom: 0 },
+    color: ['#10B981', '#059669', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'],
+    series: [{
+      type: 'pie',
+      radius: ['45%', '75%'],
+      center: ['50%', '45%'],
+      roseType: 'area',
+      itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
+      label: { formatter: '{b}\n{d}%' },
+      data
+    }]
+  })
+}
+
+function initBarChart(dom) {
+  if (barChart) barChart.dispose()
+  if (!dom || dom.offsetParent === null) {
+    console.warn('barChartBox not visible, retrying...')
+    setTimeout(() => renderCharts(), 200)
+    return
+  }
+
+  barChart = echarts.init(dom)
+  const orderStatusMap = { 'PENDING': '待付款', 'PAID': '已付款', 'SHIPPED': '已发货', 'COMPLETED': '已完成', 'CANCELLED': '已取消' }
+  const colorMap = { 'PENDING': '#F59E0B', 'PAID': '#3B82F6', 'SHIPPED': '#8B5CF6', 'COMPLETED': '#10B981', 'CANCELLED': '#9CA3AF' }
+  const statusCount = {}
+  for (const o of (adminOrders.value || [])) {
+    const s = o.status || 'PENDING'
+    statusCount[s] = (statusCount[s] || 0) + 1
+  }
+  const data = Object.entries(statusCount).map(([k, v]) => ({ name: orderStatusMap[k] || k, value: v, itemStyle: { color: colorMap[k] || '#6B7280' } }))
+
+  if (data.length === 0) {
+    barChart.setOption({
+      title: { text: '暂无订单数据', left: 'center', top: 'center', textStyle: { color: '#9CA3AF', fontSize: 14 } }
+    })
+    return
+  }
+
+  barChart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 40, right: 20, top: 20, bottom: 30 },
+    xAxis: { type: 'category', data: data.map(d => d.name), axisLabel: { fontSize: 12 } },
+    yAxis: { type: 'value', minInterval: 1 },
+    series: [{
+      type: 'bar',
+      data: data.map(d => ({ value: d.value, itemStyle: d.itemStyle })),
+      barMaxWidth: 48,
+      itemStyle: { borderRadius: [6, 6, 0, 0] }
+    }]
+  })
+}
+
+function handleResize() {
+  pieChart?.resize()
+  barChart?.resize()
+}
+
+async function loadUsers() {
+  const res = await getAdminUsers({ pageNum: 1, pageSize: 50 })
+  users.value = res.data.records
+}
+
+async function loadAdminProducts() {
+  const res = await getAdminProducts({ pageNum: 1, pageSize: 50 })
+  adminProducts.value = res.data.records
+}
+
+async function loadAdminOrders() {
+  const res = await getAdminOrders({ pageNum: 1, pageSize: 50 })
+  adminOrders.value = res.data.records
+}
+
+async function loadCategories() {
+  const res = await getCategoryList()
+  categories.value = res.data
+}
+
+async function toggleUserStatus(row) {
+  const newStatus = row.status === 1 ? 0 : 1
+  await updateUserStatus(row.id, newStatus)
+  ElMessage.success('操作成功')
+  loadUsers()
+}
+
+async function handleDeleteProduct(id) {
+  await ElMessageBox.confirm('确认删除？', '提示', { type: 'warning' })
+  await deleteProduct(id)
+  ElMessage.success('删除成功')
+  loadAdminProducts()
+}
+
+function openCategoryDialog(row) {
+  if (row) {
+    Object.assign(categoryForm, { id: row.id, name: row.name, sort: row.sort })
+  } else {
+    Object.assign(categoryForm, { id: null, name: '', sort: 0 })
+  }
+  categoryDialogVisible.value = true
+}
+
+async function saveCategoryForm() {
+  await saveCategory(categoryForm)
+  ElMessage.success('保存成功')
+  categoryDialogVisible.value = false
+  loadCategories()
+}
+
+async function handleDeleteCategory(id) {
+  await ElMessageBox.confirm('确认删除该分类？', '提示', { type: 'warning' })
+  await deleteCategory(id)
+  ElMessage.success('删除成功')
+  loadCategories()
+}
+
+/* ---- 状态映射 ---- */
+function productStatusText(s) {
+  const map = { ON_SALE: '在售', SOLD: '已售', OFF_SHELF: '已下架' }
+  return map[s] || s
+}
+function productStatusType(s) {
+  const map = { ON_SALE: 'success', SOLD: 'info', OFF_SHELF: 'danger' }
+  return map[s] || 'info'
+}
+function orderStatusText(s) {
+  const map = { PENDING: '待付款', PAID: '已付款', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消' }
+  return map[s] || s
+}
+function orderStatusType(s) {
+  const map = { PENDING: 'warning', PAID: 'primary', SHIPPED: 'success', COMPLETED: 'success', CANCELLED: 'info' }
+  return map[s] || 'info'
+}
+
+// === 小黑屋 ===
+function formatTime(t) {
+  if (!t) return ''
+  return t.replace('T', ' ').substring(0, 16)
+}
+
+async function loadBlacklist() {
+  const res = await getBlacklist({ pageNum: 1, pageSize: 50 })
+  blacklistUsers.value = res.data.records
+  blacklistTotal.value = res.data.total
+}
+
+async function triggerScan() {
+  scanning.value = true
+  try {
+    await triggerBlacklistScan()
+    ElMessage.success('扫描完成')
+    loadBlacklist()
+  } finally { scanning.value = false }
+}
+
+async function handleUnblacklist(userId) {
+  await ElMessageBox.confirm('确认解封该用户？', '解封确认', { type: 'warning' })
+  await unblacklistUser(userId)
+  ElMessage.success('已解封')
+  loadBlacklist()
+}
+
+// === 投诉/申诉 ===
+function reportStatusText(s) {
+  const map = { PENDING: '待处理', RESOLVED: '已通过', DISMISSED: '已驳回', APPROVED: '已通过', REJECTED: '已驳回' }
+  return map[s] || s
+}
+function reportStatusType(s) {
+  const map = { PENDING: 'warning', RESOLVED: 'success', DISMISSED: 'info', APPROVED: 'success', REJECTED: 'info' }
+  return map[s] || 'info'
+}
+
+async function loadComplaints() {
+  const res = await getAdminComplaints({ pageNum: 1, pageSize: 50 })
+  complaints.value = res.data.records
+}
+
+async function loadAppeals() {
+  const res = await getAdminAppeals({ pageNum: 1, pageSize: 50 })
+  appeals.value = res.data.records
+}
+
+async function handleReport(row, type, approve) {
+  const action = approve ? '通过' : '驳回'
+  await ElMessageBox.confirm(`确认${action}此${type === 'complaint' ? '投诉' : '申诉'}？`, `${action}确认`, { type: approve ? 'primary' : 'warning' })
+  if (type === 'complaint') {
+    await handleComplaint(row.id, { approve, handlerNote: '' })
+    loadComplaints()
+    loadBlacklist()
+  } else {
+    await handleAppeal(row.id, { approve, handlerNote: '' })
+    loadAppeals()
+    loadBlacklist()
+  }
+  ElMessage.success(`${action}成功`)
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'dashboard') loadDashboardData()
+  if (tab === 'users') loadUsers()
+  if (tab === 'products') loadAdminProducts()
+  if (tab === 'orders') loadAdminOrders()
+  if (tab === 'categories') loadCategories()
+  if (tab === 'blacklist') loadBlacklist()
+  if (tab === 'reports') { loadComplaints(); loadAppeals() }
+})
+
+onMounted(() => {
+  const tab = sessionStorage.getItem('adminTab')
+  if (tab) { activeTab.value = tab; sessionStorage.removeItem('adminTab') }
+  if (activeTab.value === 'dashboard') loadDashboardData()
+  else if (activeTab.value === 'blacklist') loadBlacklist()
+  else if (activeTab.value === 'reports') { loadComplaints(); loadAppeals() }
+  window.addEventListener('resize', handleResize)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  pieChart?.dispose()
+  barChart?.dispose()
+})
+</script>
+
+<style scoped>
+/* ====== 页面标题 ====== */
+.page-header { margin-bottom: 24px; }
+.page-title { font-size: 24px; font-weight: 800; color: #1F2937; margin: 0 0 4px; }
+.page-sub { font-size: 14px; color: #9CA3AF; margin: 0; }
+
+/* ====== 标签页 ====== */
+.admin-tabs { margin-top: 4px; }
+.admin-tabs :deep(.el-tabs__item) { display: flex; align-items: center; gap: 6px; }
+
+/* ====== 统计卡片 ====== */
+.stat-card {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 20px;
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  border: 1px solid #F3F4F6;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  margin-bottom: 16px;
+}
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(16,185,129,0.08);
+}
+
+.stat-icon-bg {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; border-radius: 14px;
+  margin-bottom: 12px;
+}
+.stat-users .stat-icon-bg { background: linear-gradient(135deg, #ECFDF5, #D1FAE5); color: #10B981; }
+.stat-products .stat-icon-bg { background: linear-gradient(135deg, #EFF6FF, #DBEAFE); color: #3B82F6; }
+.stat-orders .stat-icon-bg { background: linear-gradient(135deg, #FFFBEB, #FEF3C7); color: #F59E0B; }
+.stat-today .stat-icon-bg { background: linear-gradient(135deg, #F5F3FF, #EDE9FE); color: #8B5CF6; }
+
+.stat-value {
+  font-size: 36px; font-weight: 800; color: #1F2937;
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.stat-label {
+  margin-top: 6px; color: #6B7280; font-size: 13px; font-weight: 500;
+}
+
+/* ====== 图表卡片 ====== */
+.chart-card {
+  background: #fff; border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  border: 1px solid #F3F4F6;
+  margin-bottom: 16px;
+}
+.chart-card-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 12px;
+}
+.chart-title {
+  font-size: 15px; font-weight: 600; color: #374151;
+}
+.chart-box {
+  width: 100%; height: 340px; min-height: 340px;
+}
+
+/* ====== 表格卡片 ====== */
+.table-card {
+  background: #fff; border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  border: 1px solid #F3F4F6;
+}
+.table-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px; font-size: 14px; color: #6B7280;
+}
+.table-header strong { color: #10B981; font-weight: 700; }
+
+/* ====== 响应式 ====== */
+@media (max-width: 768px) {
+  .stat-card { padding: 16px 12px; }
+  .stat-value { font-size: 26px; }
+  .stat-icon-bg { width: 40px; height: 40px; border-radius: 10px; }
+  .chart-box { height: 260px; min-height: 260px; }
+  .table-card { padding: 12px 10px; }
+}
+/* 手机端：统计卡每行2个，表格横向滚动 */
+@media (max-width: 480px) {
+  .page-title { font-size: 20px; }
+  .stat-card { padding: 14px 10px; border-radius: 12px; }
+  .stat-value { font-size: 22px; }
+  .stat-icon-bg { width: 36px; height: 36px; border-radius: 8px; margin-bottom: 8px; }
+  .stat-icon-bg .el-icon { font-size: 18px; }
+  .chart-box { height: 220px; min-height: 220px; }
+  .chart-card { padding: 14px 16px; }
+  .table-card {
+    padding: 12px 8px; border-radius: 12px;
+    overflow-x: auto;
+  }
+}
+</style>
