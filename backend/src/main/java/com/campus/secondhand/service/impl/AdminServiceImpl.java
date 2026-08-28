@@ -366,12 +366,14 @@ public class AdminServiceImpl implements AdminService {
         if (product == null) throw new BusinessException("商品不存在");
         product.setStatus(status);
         productMapper.updateById(product);
+        cacheUtil.delete(String.format(RedisKeyConstants.CACHE_PRODUCT_DETAIL, productId));
     }
 
     @Override
     public void deleteProduct(Long productId) {
         checkAdmin();
         productMapper.deleteById(productId);
+        cacheUtil.delete(String.format(RedisKeyConstants.CACHE_PRODUCT_DETAIL, productId));
     }
 
     // ===== 管理员管理（仅 SUPER_ADMIN） =====
@@ -474,10 +476,13 @@ public class AdminServiceImpl implements AdminService {
         if ("SUPER_ADMIN".equals(user.getRole())) throw new BusinessException("不能删除超级管理员");
         if (user.getId().equals(UserContext.getUserId())) throw new BusinessException("不能删除自己");
 
-        // 级联清理：商品下架、未完成订单取消、收藏/地址/购物车清除
+        // 级联清理：商品下架、未完成订单取消、收藏/地址/购物车清除；绕过 Service 层缓存清理，需手动失效详情缓存
         productMapper.update(null, new LambdaUpdateWrapper<Product>()
                 .eq(Product::getUserId, id)
                 .set(Product::getStatus, "OFF_SHELF"));
+        productMapper.selectList(new LambdaQueryWrapper<Product>()
+                        .select(Product::getId).eq(Product::getUserId, id))
+                .forEach(p -> cacheUtil.delete(String.format(RedisKeyConstants.CACHE_PRODUCT_DETAIL, p.getId())));
         orderMapper.update(null, new LambdaUpdateWrapper<Order>()
                 .in(Order::getStatus, "PENDING", "PAID", "SHIPPED")
                 .and(w -> w.eq(Order::getBuyerId, id).or().eq(Order::getSellerId, id))

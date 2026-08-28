@@ -134,6 +134,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (!offShelfed) {
             throw new BusinessException("该商品已被他人抢先下单");
         }
+        // CAS 走 Wrapper 更新，绕过 updateById 的缓存清理，需主动失效详情缓存，避免详情接口读到脏缓存
+        productService.evictDetailCache(dto.getProductId());
 
         return baseMapper.selectOrderDetail(order.getId());
     }

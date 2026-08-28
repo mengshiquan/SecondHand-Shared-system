@@ -177,6 +177,11 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     // ===== 缓存统一失效：覆写 IService 通用方法，所有状态变更自动清除缓存 =====
 
     @Override
+    public void evictDetailCache(Long productId) {
+        cacheUtil.delete(String.format(RedisKeyConstants.CACHE_PRODUCT_DETAIL, productId));
+    }
+
+    @Override
     public boolean updateById(Product entity) {
         boolean ok = super.updateById(entity);
         if (ok) cacheUtil.delete(String.format(RedisKeyConstants.CACHE_PRODUCT_DETAIL, entity.getId()));
