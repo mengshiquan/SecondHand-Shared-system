@@ -1884,7 +1884,7 @@ git commit -m "feat: sales statistics with day/week/month aggregation and Excel 
 - Modify: `backend/src/main/java/com/campus/secondhand/controller/FavoriteController.java`
 - Modify: `frontend/src/api/favorite.js`（Task 8 一并处理）
 
-- [ ] **Step 1: FavoriteService 接口变更**
+- [x] **Step 1: FavoriteService 接口变更**
 
 ```java
     void removeBatch(java.util.List<Long> productIds);
@@ -1896,7 +1896,7 @@ git commit -m "feat: sales statistics with day/week/month aggregation and Excel 
     IPage<ProductVO> pageList(Integer pageNum, Integer pageSize, String keyword);
 ```
 
-- [ ] **Step 2: FavoriteServiceImpl 实现**
+- [x] **Step 2: FavoriteServiceImpl 实现**
 
 `removeBatch`：
 
@@ -1920,7 +1920,7 @@ git commit -m "feat: sales statistics with day/week/month aggregation and Excel 
         }
 ```
 
-- [ ] **Step 3: FavoriteController 更新**
+- [x] **Step 3: FavoriteController 更新**
 
 ```java
     /** 批量取消收藏 */
@@ -1943,7 +1943,7 @@ git commit -m "feat: sales statistics with day/week/month aggregation and Excel 
     }
 ```
 
-- [ ] **Step 4: 编译验证 + Commit**
+- [x] **Step 4: 编译验证 + Commit**
 
 ```bash
 mvn compile -q

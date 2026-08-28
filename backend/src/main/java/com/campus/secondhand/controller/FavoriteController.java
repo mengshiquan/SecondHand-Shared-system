@@ -34,7 +34,15 @@ public class FavoriteController {
     @GetMapping("/list")
     public Result<IPage<ProductVO>> list(
             @RequestParam(defaultValue = "1") Integer pageNum,
-            @RequestParam(defaultValue = "10") Integer pageSize) {
-        return Result.success(favoriteService.pageList(pageNum, pageSize));
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String keyword) {
+        return Result.success(favoriteService.pageList(pageNum, pageSize, keyword));
+    }
+
+    /** 批量取消收藏 */
+    @DeleteMapping("/batch")
+    public Result<Void> removeBatch(@RequestBody java.util.Map<String, java.util.List<Long>> params) {
+        favoriteService.removeBatch(params.get("productIds"));
+        return Result.success();
     }
 }

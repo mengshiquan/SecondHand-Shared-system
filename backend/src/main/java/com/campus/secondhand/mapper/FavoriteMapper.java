@@ -11,5 +11,5 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface FavoriteMapper extends BaseMapper<Favorite> {
 
-    IPage<ProductVO> selectFavoritePage(Page<ProductVO> page, @Param("userId") Long userId);
+    IPage<ProductVO> selectFavoritePage(Page<ProductVO> page, @Param("userId") Long userId, @Param("keyword") String keyword);
 }

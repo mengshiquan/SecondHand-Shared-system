@@ -18,8 +18,10 @@ import com.campus.secondhand.util.UserContext;
 import com.campus.secondhand.vo.ProductVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.util.List;
 
 @Service
 public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> implements FavoriteService {
@@ -71,8 +73,18 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> i
     }
 
     @Override
-    public IPage<ProductVO> pageList(Integer pageNum, Integer pageSize) {
+    @Transactional(rollbackFor = Exception.class)
+    public void removeBatch(List<Long> productIds) {
+        if (productIds == null || productIds.isEmpty()) return;
+        Long userId = UserContext.getUserId();
+        remove(new LambdaQueryWrapper<Favorite>()
+                .eq(Favorite::getUserId, userId)
+                .in(Favorite::getProductId, productIds));
+    }
+
+    @Override
+    public IPage<ProductVO> pageList(Integer pageNum, Integer pageSize, String keyword) {
         Page<ProductVO> page = new Page<>(pageNum, pageSize);
-        return baseMapper.selectFavoritePage(page, UserContext.getUserId());
+        return baseMapper.selectFavoritePage(page, UserContext.getUserId(), keyword);
     }
 }

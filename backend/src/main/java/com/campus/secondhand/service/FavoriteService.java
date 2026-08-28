@@ -11,5 +11,7 @@ public interface FavoriteService extends IService<Favorite> {
 
     boolean isFavorited(Long productId);
 
-    IPage<ProductVO> pageList(Integer pageNum, Integer pageSize);
+    void removeBatch(java.util.List<Long> productIds);
+
+    IPage<ProductVO> pageList(Integer pageNum, Integer pageSize, String keyword);
 }
