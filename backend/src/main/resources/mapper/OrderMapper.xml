@@ -38,4 +38,25 @@
         LEFT JOIN t_user su ON o.seller_id = su.id
         WHERE o.id = #{id} AND o.deleted = 0
     </select>
+
+    <!-- 销售明细统计：已完成订单，按时间范围过滤 -->
+    <select id="selectSalesRows" resultType="com.campus.secondhand.vo.SalesRowVO">
+        SELECT o.update_time AS dealTime,
+               o.order_no AS orderNo,
+               p.title AS productTitle,
+               c.name AS categoryName,
+               su.nickname AS sellerNickname,
+               bu.nickname AS buyerNickname,
+               o.price AS price
+        FROM t_order o
+        JOIN t_product p ON o.product_id = p.id
+        LEFT JOIN t_category c ON p.category_id = c.id
+        JOIN t_user su ON o.seller_id = su.id
+        JOIN t_user bu ON o.buyer_id = bu.id
+        WHERE o.deleted = 0
+          AND o.status = 'COMPLETED'
+          <if test="startTime != null"> AND o.update_time &gt;= #{startTime} </if>
+          <if test="endTime != null"> AND o.update_time &lt;= #{endTime} </if>
+        ORDER BY o.update_time DESC
+    </select>
 </mapper>

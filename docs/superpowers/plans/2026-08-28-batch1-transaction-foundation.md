@@ -558,7 +558,7 @@ git commit -m "feat: address management module (CRUD + default address)"
 - Modify: `backend/src/main/java/com/campus/secondhand/service/impl/OrderServiceImpl.java`（下单关联地址）
 - Modify: `backend/src/main/java/com/campus/secondhand/entity/Order.java`（新增字段）
 
-- [ ] **Step 1: Order 实体补字段**（为购物车结算做准备）
+- [x] **Step 1: Order 实体补字段**（为购物车结算做准备）
 
 在 `Order.java` 的 `remark` 字段后追加：
 
@@ -581,7 +581,7 @@ git commit -m "feat: address management module (CRUD + default address)"
 
 同时给 `payOrder` 里补付款时间：`OrderServiceImpl.payOrder` 中 `order.setStatus("PAID");` 前加 `order.setPaymentTime(LocalDateTime.now());`。
 
-- [ ] **Step 2: Cart 实体**
+- [x] **Step 2: Cart 实体**
 
 ```java
 package com.campus.secondhand.entity;
@@ -613,7 +613,7 @@ public class Cart {
 }
 ```
 
-- [ ] **Step 3: CartMapper + CartCheckoutDTO**
+- [x] **Step 3: CartMapper + CartCheckoutDTO**
 
 `CartMapper.java`：
 
@@ -651,7 +651,7 @@ public class CartCheckoutDTO {
 }
 ```
 
-- [ ] **Step 4: CartService 接口**
+- [x] **Step 4: CartService 接口**
 
 ```java
 package com.campus.secondhand.service;
@@ -680,7 +680,7 @@ public interface CartService extends IService<Cart> {
 }
 ```
 
-- [ ] **Step 5: CartItemVO**
+- [x] **Step 5: CartItemVO**
 
 新建 `backend/src/main/java/com/campus/secondhand/vo/CartItemVO.java`：
 
@@ -719,7 +719,7 @@ public class CartItemVO {
 }
 ```
 
-- [ ] **Step 6: CartServiceImpl**
+- [x] **Step 6: CartServiceImpl**
 
 ```java
 package com.campus.secondhand.service.impl;
@@ -882,7 +882,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 }
 ```
 
-- [ ] **Step 7: OrderDTO 新增 addressId**
+- [x] **Step 7: OrderDTO 新增 addressId**
 
 在 `OrderDTO.java` 追加：
 
@@ -907,7 +907,7 @@ public class CartServiceImpl extends ServiceImpl<CartMapper, Cart> implements Ca
 
 并在 `OrderServiceImpl` 中注入 `@Autowired private AddressService addressService;`。
 
-- [ ] **Step 8: CartController**
+- [x] **Step 8: CartController**
 
 ```java
 package com.campus.secondhand.controller;
@@ -976,7 +976,7 @@ public class CartController {
 }
 ```
 
-- [ ] **Step 9: 编译验证 + Commit**
+- [x] **Step 9: 编译验证 + Commit**
 
 ```bash
 mvn compile -q
@@ -995,7 +995,7 @@ git commit -m "feat: shopping cart module with single/batch checkout"
 - Modify: `backend/src/main/java/com/campus/secondhand/service/AdminService.java` + `impl/AdminServiceImpl.java`
 - Modify: `backend/src/main/java/com/campus/secondhand/controller/AdminController.java`
 
-- [ ] **Step 1: OrderService 接口新增方法**
+- [x] **Step 1: OrderService 接口新增方法**
 
 ```java
     void cancelOrder(Long id);
@@ -1013,7 +1013,7 @@ git commit -m "feat: shopping cart module with single/batch checkout"
     void deleteOrder(Long id);
 ```
 
-- [ ] **Step 2: OrderServiceImpl 退款相关实现**
+- [x] **Step 2: OrderServiceImpl 退款相关实现**
 
 在 `OrderServiceImpl` 中追加（置于 `detail` 方法之后）：
 
@@ -1150,7 +1150,7 @@ git commit -m "feat: shopping cart module with single/batch checkout"
     }
 ```
 
-- [ ] **Step 3: 超时自动退款定时任务**
+- [x] **Step 3: 超时自动退款定时任务**
 
 在 `OrderServiceImpl` 中 `cancelExpiredOrders` 之后追加：
 
@@ -1171,7 +1171,7 @@ git commit -m "feat: shopping cart module with single/batch checkout"
     }
 ```
 
-- [ ] **Step 4: OrderController 新增接口**
+- [x] **Step 4: OrderController 新增接口**
 
 ```java
     /** 买家取消订单 */
@@ -1217,7 +1217,7 @@ git commit -m "feat: shopping cart module with single/batch checkout"
     }
 ```
 
-- [ ] **Step 5: 管理员仲裁 + 订单/商品管理补全**
+- [x] **Step 5: 管理员仲裁 + 订单/商品管理补全**
 
 `AdminService.java` 追加：
 
@@ -1319,7 +1319,7 @@ git commit -m "feat: shopping cart module with single/batch checkout"
     }
 ```
 
-- [ ] **Step 6: 编译验证 + Commit**
+- [x] **Step 6: 编译验证 + Commit**
 
 ```bash
 mvn compile -q
@@ -1337,7 +1337,7 @@ git commit -m "feat: order refund flow, cancel, arbitration, auto-refund schedul
 - Modify: `backend/src/main/java/com/campus/secondhand/service/impl/AdminServiceImpl.java`
 - Modify: `backend/src/main/java/com/campus/secondhand/controller/AdminController.java`
 
-- [ ] **Step 1: UserContext 角色判断升级**
+- [x] **Step 1: UserContext 角色判断升级**
 
 将 `UserContext.java` 的角色方法改为：
 
@@ -1354,7 +1354,7 @@ git commit -m "feat: order refund flow, cancel, arbitration, auto-refund schedul
 
 **注意**：角色存储在 JWT Token 中。admin 账号角色已改为 `SUPER_ADMIN`，需重新登录才会生效（旧 Token 里仍是 ADMIN，`isAdmin()` 仍返回 true，无兼容问题）。
 
-- [ ] **Step 2: AdminService 新增方法**
+- [x] **Step 2: AdminService 新增方法**
 
 ```java
     // ===== 管理员管理（仅 SUPER_ADMIN） =====
@@ -1378,7 +1378,7 @@ git commit -m "feat: order refund flow, cancel, arbitration, auto-refund schedul
     void resetUserPassword(Long id);
 ```
 
-- [ ] **Step 3: AdminServiceImpl — 管理员管理实现**
+- [x] **Step 3: AdminServiceImpl — 管理员管理实现**
 
 先在类中注入 `@Autowired private BCryptPasswordEncoder passwordEncoder;`，然后追加：
 
@@ -1449,7 +1449,7 @@ git commit -m "feat: order refund flow, cancel, arbitration, auto-refund schedul
     }
 ```
 
-- [ ] **Step 4: AdminServiceImpl — 用户管理补全实现**
+- [x] **Step 4: AdminServiceImpl — 用户管理补全实现**
 
 先注入 `favoriteMapper`、`addressMapper`、`cartMapper`：
 
@@ -1530,7 +1530,7 @@ git commit -m "feat: order refund flow, cancel, arbitration, auto-refund schedul
     }
 ```
 
-- [ ] **Step 5: updateUserStatus 保护超级管理员**
+- [x] **Step 5: updateUserStatus 保护超级管理员**
 
 `AdminServiceImpl.updateUserStatus` 在取出 user 后、状态修改前追加：
 
@@ -1540,7 +1540,7 @@ git commit -m "feat: order refund flow, cancel, arbitration, auto-refund schedul
         }
 ```
 
-- [ ] **Step 6: AdminController 新增端点**
+- [x] **Step 6: AdminController 新增端点**
 
 ```java
     // ===== 管理员管理（仅超级管理员） =====
@@ -1605,7 +1605,7 @@ git commit -m "feat: order refund flow, cancel, arbitration, auto-refund schedul
     }
 ```
 
-- [ ] **Step 7: 编译验证 + Commit**
+- [x] **Step 7: 编译验证 + Commit**
 
 ```bash
 mvn compile -q
@@ -1626,7 +1626,7 @@ git commit -m "feat: SUPER_ADMIN role + admin management + admin user CRUD"
 - Create: `backend/src/main/java/com/campus/secondhand/service/impl/SalesStatsServiceImpl.java`
 - Create: `backend/src/main/java/com/campus/secondhand/controller/AdminStatsController.java`
 
-- [ ] **Step 1: pom.xml 新增 EasyExcel 依赖**
+- [x] **Step 1: pom.xml 新增 EasyExcel 依赖**
 
 在 `hutool-all` 依赖后追加：
 
@@ -1638,7 +1638,7 @@ git commit -m "feat: SUPER_ADMIN role + admin management + admin user CRUD"
         </dependency>
 ```
 
-- [ ] **Step 2: SalesRowVO**
+- [x] **Step 2: SalesRowVO**
 
 ```java
 package com.campus.secondhand.vo;
@@ -1678,7 +1678,7 @@ public class SalesRowVO {
 }
 ```
 
-- [ ] **Step 3: OrderMapper.xml 统计查询**
+- [x] **Step 3: OrderMapper.xml 统计查询**
 
 在 `OrderMapper.xml` 的 `</mapper>` 前追加：
 
@@ -1712,7 +1712,7 @@ public class SalesRowVO {
                                      @Param("endTime") LocalDateTime endTime);
 ```
 
-- [ ] **Step 4: SalesStatsService + Impl**
+- [x] **Step 4: SalesStatsService + Impl**
 
 ```java
 package com.campus.secondhand.service;
@@ -1814,7 +1814,7 @@ public class SalesStatsServiceImpl implements SalesStatsService {
 }
 ```
 
-- [ ] **Step 5: AdminStatsController**
+- [x] **Step 5: AdminStatsController**
 
 ```java
 package com.campus.secondhand.controller;
@@ -1866,7 +1866,7 @@ public class AdminStatsController {
 
 导出接口需携带 Token 下载：前端用 fetch/axios 拿 blob，再拼 Authorization 头（见 Task 8）。
 
-- [ ] **Step 6: 编译验证 + Commit**
+- [x] **Step 6: 编译验证 + Commit**
 
 ```bash
 mvn compile -q

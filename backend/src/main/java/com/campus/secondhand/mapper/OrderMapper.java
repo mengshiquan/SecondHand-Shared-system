@@ -5,8 +5,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.secondhand.entity.Order;
 import com.campus.secondhand.vo.OrderVO;
+import com.campus.secondhand.vo.SalesRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Mapper
 public interface OrderMapper extends BaseMapper<Order> {
@@ -17,4 +21,7 @@ public interface OrderMapper extends BaseMapper<Order> {
                                    @Param("status") String status);
 
     OrderVO selectOrderDetail(@Param("id") Long id);
+
+    List<SalesRowVO> selectSalesRows(@Param("startTime") LocalDateTime startTime,
+                                     @Param("endTime") LocalDateTime endTime);
 }
