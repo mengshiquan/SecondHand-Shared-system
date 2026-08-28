@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.secondhand.common.BusinessException;
+import com.campus.secondhand.common.RedisKeyConstants;
 import com.campus.secondhand.dto.ProductQueryDTO;
 import com.campus.secondhand.entity.Category;
 import com.campus.secondhand.entity.Appeal;
@@ -20,6 +21,7 @@ import com.campus.secondhand.service.BlacklistService;
 import com.campus.secondhand.service.CategoryService;
 import com.campus.secondhand.service.NotificationService;
 import com.campus.secondhand.service.UserService;
+import com.campus.secondhand.util.RedisCacheUtil;
 import com.campus.secondhand.util.UserContext;
 import com.campus.secondhand.vo.DashboardVO;
 import com.campus.secondhand.vo.OrderVO;
@@ -55,11 +57,16 @@ public class AdminServiceImpl implements AdminService {
     private AppealMapper appealMapper;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private RedisCacheUtil cacheUtil;
 
     @Override
     public DashboardVO dashboard() {
         checkAdmin();
-        DashboardVO vo = new DashboardVO();
+        DashboardVO vo = cacheUtil.get(RedisKeyConstants.CACHE_ADMIN_DASHBOARD);
+        if (vo != null) return vo;
+
+        vo = new DashboardVO();
         vo.setUserCount(userService.count());
         vo.setProductCount(productMapper.selectCount(null));
         vo.setOrderCount(orderMapper.selectCount(null));
@@ -68,21 +75,45 @@ public class AdminServiceImpl implements AdminService {
         LocalDateTime end = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
         vo.setTodayOrderCount(orderMapper.selectCount(new LambdaQueryWrapper<Order>()
                 .between(Order::getCreateTime, start, end)));
+
+        cacheUtil.set(RedisKeyConstants.CACHE_ADMIN_DASHBOARD, vo, RedisKeyConstants.TTL_DASHBOARD);
         return vo;
     }
 
     @Override
-    public IPage<User> userPage(Integer pageNum, Integer pageSize, String keyword) {
+    public IPage<User> userPage(Integer pageNum, Integer pageSize, String keyword, String verifyStatus) {
         checkAdmin();
         Page<User> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.like(User::getUsername, keyword).or().like(User::getNickname, keyword);
         }
+        if (verifyStatus != null && !verifyStatus.isEmpty()) {
+            wrapper.eq(User::getVerifyStatus, verifyStatus);
+        }
         wrapper.orderByDesc(User::getCreateTime);
         IPage<User> result = userService.page(page, wrapper);
         result.getRecords().forEach(u -> u.setPassword(null));
         return result;
+    }
+
+    @Override
+    public void verifyUsers(List<Long> userIds, String action) {
+        checkAdmin();
+        if (userIds == null || userIds.isEmpty()) {
+            throw new BusinessException("请选择要审核的用户");
+        }
+        if (!"APPROVE".equals(action) && !"REJECT".equals(action)) {
+            throw new BusinessException("无效的审核动作");
+        }
+        String target = "APPROVE".equals(action) ? "APPROVED" : "REJECTED";
+        for (Long uid : userIds) {
+            User user = userService.getById(uid);
+            if (user != null && "PENDING".equals(user.getVerifyStatus())) {
+                user.setVerifyStatus(target);
+                userService.updateById(user);
+            }
+        }
     }
 
     @Override

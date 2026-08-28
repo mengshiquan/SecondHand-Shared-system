@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.secondhand.common.BusinessException;
+import com.campus.secondhand.common.RedisKeyConstants;
 import com.campus.secondhand.entity.*;
 import com.campus.secondhand.mapper.CommentMapper;
 import com.campus.secondhand.mapper.OrderMapper;
@@ -12,10 +13,14 @@ import com.campus.secondhand.mapper.ProductMapper;
 import com.campus.secondhand.service.BlacklistService;
 import com.campus.secondhand.service.NotificationService;
 import com.campus.secondhand.service.UserService;
+import com.campus.secondhand.util.RedisLockUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -23,6 +28,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class BlacklistServiceImpl implements BlacklistService {
+
+    private static final Logger log = LoggerFactory.getLogger(BlacklistServiceImpl.class);
 
     @Autowired
     private UserService userService;
@@ -34,13 +41,32 @@ public class BlacklistServiceImpl implements BlacklistService {
     private ProductMapper productMapper;
     @Autowired
     private NotificationService notificationService;
+    @Autowired
+    private RedisLockUtil redisLockUtil;
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     private static final int BASE_DAYS = 14;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     @Scheduled(cron = "0 0 3 * * ?")
     public void autoScan() {
+        // 非阻塞抢锁：定时任务与手动触发不会重叠执行
+        String token = redisLockUtil.tryLock(RedisKeyConstants.LOCK_BLACKLIST_SCAN,
+                java.time.Duration.ofMinutes(10));
+        if (token == null) {
+            log.info("黑名单扫描任务已在执行中，本轮跳过");
+            return;
+        }
+        try {
+            transactionTemplate.executeWithoutResult(status -> doAutoScan());
+        } finally {
+            redisLockUtil.unlock(RedisKeyConstants.LOCK_BLACKLIST_SCAN, token);
+        }
+    }
+
+    /** 原 autoScan 逻辑体（在事务内执行） */
+    private void doAutoScan() {
         LocalDateTime now = LocalDateTime.now();
         // 记录本轮解封的用户ID，避免立即重新拉黑
         Set<Long> justUnblacklisted = new HashSet<>();

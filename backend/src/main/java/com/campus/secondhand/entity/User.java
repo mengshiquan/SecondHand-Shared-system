@@ -51,6 +51,15 @@ public class User {
     /** 历史拉黑次数 */
     private Integer blacklistCount;
 
+    /** 学号（12位纯数字） */
+    private String studentId;
+
+    /** 学校名称 */
+    private String schoolName;
+
+    /** 认证状态：PENDING/APPROVED/REJECTED */
+    private String verifyStatus;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

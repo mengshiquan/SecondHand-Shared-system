@@ -12,6 +12,9 @@ public class ProductQueryDTO {
 
     private Long categoryId;
 
+    /** 父分类ID（一级分类），查询该分类下所有子分类商品 */
+    private Long parentCategoryId;
+
     private String status;
 
     /** 当前登录用户ID（用于收藏状态） */

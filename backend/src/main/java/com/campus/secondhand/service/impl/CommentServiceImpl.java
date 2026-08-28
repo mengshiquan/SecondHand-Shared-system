@@ -4,19 +4,26 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.campus.secondhand.common.BusinessException;
+import com.campus.secondhand.common.VerifyGuard;
 import com.campus.secondhand.dto.CommentDTO;
 import com.campus.secondhand.entity.Comment;
 import com.campus.secondhand.mapper.CommentMapper;
 import com.campus.secondhand.service.CommentService;
+import com.campus.secondhand.service.UserService;
 import com.campus.secondhand.util.UserContext;
 import com.campus.secondhand.vo.CommentVO;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> implements CommentService {
 
+    @Autowired
+    private UserService userService;
+
     @Override
     public void addComment(CommentDTO dto) {
+        VerifyGuard.requireVerified(userService);
         Comment comment = new Comment();
         comment.setProductId(dto.getProductId());
         comment.setUserId(UserContext.getUserId());

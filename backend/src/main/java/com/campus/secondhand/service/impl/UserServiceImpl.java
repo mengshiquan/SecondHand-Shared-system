@@ -6,7 +6,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.campus.secondhand.common.BusinessException;
 import com.campus.secondhand.dto.LoginDTO;
 import com.campus.secondhand.dto.RegisterDTO;
+import com.campus.secondhand.entity.Order;
 import com.campus.secondhand.entity.User;
+import com.campus.secondhand.mapper.OrderMapper;
 import com.campus.secondhand.mapper.UserMapper;
 import com.campus.secondhand.service.UserService;
 import com.campus.secondhand.util.JwtUtil;
@@ -14,6 +16,7 @@ import com.campus.secondhand.util.UserContext;
 import com.campus.secondhand.vo.LoginVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
@@ -25,6 +28,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private OrderMapper orderMapper;
+
     @Override
     public LoginVO login(LoginDTO dto) {
         User user = getOne(new LambdaQueryWrapper<User>()
@@ -32,11 +41,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             throw new BusinessException("用户名或密码错误");
         }
-        if (!user.getPassword().equals(encryptPassword(dto.getPassword()))) {
+        if (!verifyAndUpgradePassword(user, dto.getPassword())) {
             throw new BusinessException("用户名或密码错误");
         }
         if (user.getStatus() != null && user.getStatus() == 0) {
             throw new BusinessException("账号已被禁用");
+        }
+        if (user.getStatus() != null && user.getStatus() == 2) {
+            throw new BusinessException("该账号已注销");
         }
         return buildLoginVO(user);
     }
@@ -51,9 +63,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
         User user = new User();
         BeanUtils.copyProperties(dto, user);
-        user.setPassword(encryptPassword(dto.getPassword()));
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole("USER");
         user.setStatus(1);
+        user.setVerifyStatus("APPROVED");
         save(user);
     }
 
@@ -86,10 +99,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public void updatePassword(String oldPassword, String newPassword) {
         Long userId = UserContext.getUserId();
         User user = getById(userId);
-        if (!user.getPassword().equals(encryptPassword(oldPassword))) {
+        if (!verifyAndUpgradePassword(user, oldPassword)) {
             throw new BusinessException("原密码错误");
         }
-        user.setPassword(encryptPassword(newPassword));
+        user.setPassword(passwordEncoder.encode(newPassword));
+        updateById(user);
+    }
+
+    @Override
+    public void deactivate(String password) {
+        Long userId = UserContext.getUserId();
+        User user = getById(userId);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        if ("ADMIN".equals(user.getRole())) {
+            throw new BusinessException("管理员账号不允许注销");
+        }
+        if (!verifyAndUpgradePassword(user, password)) {
+            throw new BusinessException("密码错误");
+        }
+        // 检查未完成的订单（买家或卖家角色）
+        long pendingOrders = orderMapper.selectCount(new LambdaQueryWrapper<Order>()
+                .in(Order::getStatus, "PENDING", "PAID", "SHIPPED")
+                .and(w -> w.eq(Order::getBuyerId, userId).or().eq(Order::getSellerId, userId)));
+        if (pendingOrders > 0) {
+            throw new BusinessException("你有 " + pendingOrders + " 笔未完成的订单，请先完成或取消后再注销");
+        }
+        user.setStatus(2);
         updateById(user);
     }
 
@@ -104,7 +141,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return vo;
     }
 
-    private String encryptPassword(String password) {
-        return DigestUtil.md5Hex(password);
+    /**
+     * 验证密码，支持 BCrypt（新）和 MD5（旧）双格式。
+     * 验证成功时若为旧 MD5 格式则自动升级为 BCrypt。
+     */
+    private boolean verifyAndUpgradePassword(User user, String rawPassword) {
+        String stored = user.getPassword();
+
+        // BCrypt 格式（新密码或已迁移的密码）
+        if (stored != null && stored.startsWith("$2a$")) {
+            // 直接匹配：BCrypt(plainPassword)
+            if (passwordEncoder.matches(rawPassword, stored)) {
+                return true;
+            }
+            // 兼容迁移格式：BCrypt(MD5(plainPassword))
+            String md5Hex = DigestUtil.md5Hex(rawPassword);
+            if (passwordEncoder.matches(md5Hex, stored)) {
+                // 升级为 BCrypt(plainPassword)，后续登录不再需要 MD5 兼容
+                user.setPassword(passwordEncoder.encode(rawPassword));
+                updateById(user);
+                return true;
+            }
+            return false;
+        }
+
+        // MD5 格式（尚未被 PasswordMigration 迁移的旧密码）
+        if (stored != null && stored.length() == 32) {
+            if (stored.equals(DigestUtil.md5Hex(rawPassword))) {
+                // 匹配成功，立即升级为 BCrypt
+                user.setPassword(passwordEncoder.encode(rawPassword));
+                updateById(user);
+                return true;
+            }
+            return false;
+        }
+
+        return false;
     }
 }

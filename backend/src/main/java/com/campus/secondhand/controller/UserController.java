@@ -70,4 +70,11 @@ public class UserController {
         }
         return Result.success(result);
     }
+
+    /** 注销账号 */
+    @PutMapping("/deactivate")
+    public Result<Void> deactivate(@RequestBody Map<String, String> params) {
+        userService.deactivate(params.get("password"));
+        return Result.success();
+    }
 }

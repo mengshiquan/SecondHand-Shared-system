@@ -1,6 +1,7 @@
 package com.campus.secondhand.common;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -36,6 +37,12 @@ public class GlobalExceptionHandler {
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining(", "));
         return Result.error(ResultCode.BAD_REQUEST.getCode(), message);
+    }
+
+    @ExceptionHandler(RedisConnectionFailureException.class)
+    public Result<Void> handleRedisException(RedisConnectionFailureException e) {
+        log.error("Redis 连接失败", e);
+        return Result.error("系统繁忙，请稍后再试");
     }
 
     @ExceptionHandler(Exception.class)

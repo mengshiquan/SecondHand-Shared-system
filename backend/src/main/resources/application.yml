@@ -9,8 +9,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/secondhand_db?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: 12345
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:12345}
   servlet:
     multipart:
       max-file-size: 10MB
@@ -18,6 +18,20 @@ spring:
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
+  # Redis 配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DB:0}
+      timeout: 3s
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2
+          max-wait: 2s
 
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
@@ -34,8 +48,12 @@ mybatis-plus:
 
 # JWT 配置
 jwt:
-  secret: campus-secondhand-jwt-secret-key-2024-very-long-string
+  secret: ${JWT_SECRET:campus-secondhand-jwt-secret-key-2024-very-long-string}
   expiration: 86400000
+
+# CORS 配置：仅允许白名单内的源携带凭证访问
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
 
 # 文件上传配置
 # ⚠️ 该路径为相对路径，解析依赖于 JVM 工作目录（working directory）

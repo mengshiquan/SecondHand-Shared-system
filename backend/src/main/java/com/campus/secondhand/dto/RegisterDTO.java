@@ -3,6 +3,7 @@ package com.campus.secondhand.dto;
 import lombok.Data;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Data
@@ -22,4 +23,12 @@ public class RegisterDTO {
     private String phone;
 
     private String email;
+
+    @NotBlank(message = "学号不能为空")
+    @Pattern(regexp = "^\\d{12}$", message = "学号格式不正确")
+    private String studentId;
+
+    @NotBlank(message = "学校名称不能为空")
+    @Size(max = 100, message = "学校名称过长")
+    private String schoolName;
 }

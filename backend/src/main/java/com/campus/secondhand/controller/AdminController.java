@@ -40,8 +40,19 @@ public class AdminController {
     public Result<IPage<User>> users(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String keyword) {
-        return Result.success(adminService.userPage(pageNum, pageSize, keyword));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String verifyStatus) {
+        return Result.success(adminService.userPage(pageNum, pageSize, keyword, verifyStatus));
+    }
+
+    /** 批量审核身份认证 */
+    @PutMapping("/users/verify")
+    public Result<Void> verifyUsers(@RequestBody Map<String, Object> params) {
+        @SuppressWarnings("unchecked")
+        List<Long> userIds = ((List<Number>) params.get("userIds"))
+                .stream().map(Number::longValue).collect(java.util.stream.Collectors.toList());
+        adminService.verifyUsers(userIds, (String) params.get("action"));
+        return Result.success();
     }
 
     /** 启用/禁用用户 */

@@ -11,7 +11,10 @@ public interface AdminService {
 
     DashboardVO dashboard();
 
-    IPage<User> userPage(Integer pageNum, Integer pageSize, String keyword);
+    IPage<User> userPage(Integer pageNum, Integer pageSize, String keyword, String verifyStatus);
+
+    /** 批量审核身份认证 */
+    void verifyUsers(java.util.List<Long> userIds, String action);
 
     void updateUserStatus(Long userId, Integer status);
 

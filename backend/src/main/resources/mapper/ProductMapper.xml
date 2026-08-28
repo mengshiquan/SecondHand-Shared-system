@@ -40,10 +40,21 @@
         WHERE p.deleted = 0
         <if test="query.keyword != null and query.keyword != ''">
             AND (p.title LIKE CONCAT('%', #{query.keyword}, '%')
-                 OR p.description LIKE CONCAT('%', #{query.keyword}, '%'))
+                 OR p.description LIKE CONCAT('%', #{query.keyword}, '%')
+                 OR p.category_id IN (
+                     SELECT id FROM t_category
+                     WHERE deleted = 0 AND parent_id IS NOT NULL AND name LIKE CONCAT('%', #{query.keyword}, '%')
+                     UNION
+                     SELECT c2.id FROM t_category c1
+                     JOIN t_category c2 ON c2.parent_id = c1.id AND c2.deleted = 0
+                     WHERE c1.deleted = 0 AND c1.parent_id IS NULL AND c1.name LIKE CONCAT('%', #{query.keyword}, '%')
+                 ))
         </if>
         <if test="query.categoryId != null">
             AND p.category_id = #{query.categoryId}
+        </if>
+        <if test="query.parentCategoryId != null">
+            AND p.category_id IN (SELECT id FROM t_category WHERE parent_id = #{query.parentCategoryId} AND deleted = 0)
         </if>
         <if test="query.status != null and query.status != ''">
             AND p.status = #{query.status}
@@ -51,7 +62,11 @@
         <if test="query.sellerId != null">
             AND p.user_id = #{query.sellerId}
         </if>
-        ORDER BY p.create_time DESC
+        ORDER BY
+        <if test="query.keyword != null and query.keyword != ''">
+            (p.title LIKE CONCAT('%', #{query.keyword}, '%') OR p.description LIKE CONCAT('%', #{query.keyword}, '%')) DESC,
+        </if>
+        p.create_time DESC
     </select>
 
     <select id="selectProductDetail" resultMap="ProductVOMap">

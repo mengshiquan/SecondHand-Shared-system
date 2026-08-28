@@ -2,22 +2,28 @@ package com.campus.secondhand.service.impl;
 
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.campus.secondhand.common.BusinessException;
+import com.campus.secondhand.common.RedisKeyConstants;
+import com.campus.secondhand.common.VerifyGuard;
 import com.campus.secondhand.dto.OrderDTO;
 import com.campus.secondhand.entity.Order;
 import com.campus.secondhand.entity.Product;
 import com.campus.secondhand.mapper.OrderMapper;
 import com.campus.secondhand.service.OrderService;
 import com.campus.secondhand.service.ProductService;
+import com.campus.secondhand.service.UserService;
+import com.campus.secondhand.util.RedisLockUtil;
 import com.campus.secondhand.util.UserContext;
 import com.campus.secondhand.vo.OrderVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -42,11 +48,27 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Autowired
     private ProductService productService;
+    @Autowired
+    private RedisLockUtil redisLockUtil;
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+    @Autowired
+    private UserService userService;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public OrderVO createOrder(OrderDTO dto) {
+        VerifyGuard.requireVerified(userService);
         Long buyerId = UserContext.getUserId();
+        String lockKey = String.format(RedisKeyConstants.LOCK_ORDER_CREATE, dto.getProductId());
+
+        // 分布式锁必须覆盖“检查→下单→下架→事务提交”全程
+        // 使用 TransactionTemplate 确保事务提交在 unlock 之前
+        return redisLockUtil.executeWithLock(lockKey,
+                java.time.Duration.ofSeconds(10), java.time.Duration.ofSeconds(3),
+                () -> transactionTemplate.execute(status -> doCreateOrder(dto, buyerId)));
+    }
+
+    private OrderVO doCreateOrder(OrderDTO dto, Long buyerId) {
         Product product = productService.getById(dto.getProductId());
         if (product == null) {
             throw new BusinessException("商品不存在");
@@ -91,9 +113,14 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setRemark(dto.getRemark());
         save(order);
 
-        // 下架商品（预留）
-        product.setStatus("OFF_SHELF");
-        productService.updateById(product);
+        // CAS 条件更新：只有商品仍在售才下架（纵深防御，即使锁失效也不会超卖）
+        boolean offShelfed = productService.update(new LambdaUpdateWrapper<Product>()
+                .eq(Product::getId, dto.getProductId())
+                .eq(Product::getStatus, "ON_SALE")
+                .set(Product::getStatus, "OFF_SHELF"));
+        if (!offShelfed) {
+            throw new BusinessException("该商品已被他人抢先下单");
+        }
 
         return baseMapper.selectOrderDetail(order.getId());
     }
