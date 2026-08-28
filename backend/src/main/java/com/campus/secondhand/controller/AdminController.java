@@ -211,4 +211,65 @@ public class AdminController {
         adminService.deleteProduct(id);
         return Result.success();
     }
+
+    // ===== 管理员管理（仅超级管理员） =====
+
+    @GetMapping("/admins")
+    public Result<IPage<User>> admins(@RequestParam(defaultValue = "1") Integer pageNum,
+                                      @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(adminService.adminPage(pageNum, pageSize));
+    }
+
+    @PostMapping("/admins")
+    public Result<Map<String, String>> createAdmin(@RequestBody Map<String, String> params) {
+        String password = adminService.createAdmin(params.get("username"), params.get("nickname"));
+        Map<String, String> result = new java.util.HashMap<>();
+        result.put("password", password);
+        return Result.success(result);
+    }
+
+    @PutMapping("/admins/{id}")
+    public Result<Void> updateAdmin(@PathVariable Long id, @RequestBody Map<String, String> params) {
+        adminService.updateAdmin(id, params.get("nickname"));
+        return Result.success();
+    }
+
+    @DeleteMapping("/admins/{id}")
+    public Result<Void> deleteAdmin(@PathVariable Long id) {
+        adminService.deleteAdmin(id);
+        return Result.success();
+    }
+
+    @PutMapping("/admins/{id}/status")
+    public Result<Void> updateAdminStatus(@PathVariable Long id, @RequestBody Map<String, Integer> params) {
+        adminService.updateAdminStatus(id, params.get("status"));
+        return Result.success();
+    }
+
+    // ===== 用户管理补全 =====
+
+    @PostMapping("/users")
+    public Result<Void> createUser(@RequestBody Map<String, String> params) {
+        adminService.createUser(params.get("username"), params.get("password"),
+                params.get("nickname"), params.get("role"));
+        return Result.success();
+    }
+
+    @PutMapping("/users/{id}")
+    public Result<Void> updateUser(@PathVariable Long id, @RequestBody Map<String, String> params) {
+        adminService.updateUser(id, params.get("nickname"), params.get("phone"), params.get("email"));
+        return Result.success();
+    }
+
+    @DeleteMapping("/users/{id}")
+    public Result<Void> deleteUser(@PathVariable Long id) {
+        adminService.deleteUser(id);
+        return Result.success();
+    }
+
+    @PutMapping("/users/{id}/reset-password")
+    public Result<Void> resetPassword(@PathVariable Long id) {
+        adminService.resetUserPassword(id);
+        return Result.success();
+    }
 }

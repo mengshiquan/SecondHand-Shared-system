@@ -31,7 +31,12 @@ public class UserContext {
     }
 
     public static boolean isAdmin() {
-        return "ADMIN".equals(getRole());
+        String role = getRole();
+        return "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
+    }
+
+    public static boolean isSuperAdmin() {
+        return "SUPER_ADMIN".equals(getRole());
     }
 
     private static HttpServletRequest getRequest() {

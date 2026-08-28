@@ -1,19 +1,26 @@
 package com.campus.secondhand.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.campus.secondhand.common.BusinessException;
 import com.campus.secondhand.common.RedisKeyConstants;
 import com.campus.secondhand.dto.ProductQueryDTO;
+import com.campus.secondhand.entity.Address;
+import com.campus.secondhand.entity.Cart;
 import com.campus.secondhand.entity.Category;
 import com.campus.secondhand.entity.Appeal;
 import com.campus.secondhand.entity.Complaint;
+import com.campus.secondhand.entity.Favorite;
 import com.campus.secondhand.entity.Order;
 import com.campus.secondhand.entity.Product;
 import com.campus.secondhand.entity.User;
+import com.campus.secondhand.mapper.AddressMapper;
 import com.campus.secondhand.mapper.AppealMapper;
+import com.campus.secondhand.mapper.CartMapper;
 import com.campus.secondhand.mapper.ComplaintMapper;
+import com.campus.secondhand.mapper.FavoriteMapper;
 import com.campus.secondhand.mapper.OrderMapper;
 import com.campus.secondhand.mapper.ProductMapper;
 import com.campus.secondhand.service.AdminService;
@@ -28,6 +35,7 @@ import com.campus.secondhand.vo.DashboardVO;
 import com.campus.secondhand.vo.OrderVO;
 import com.campus.secondhand.vo.ProductVO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +70,14 @@ public class AdminServiceImpl implements AdminService {
     private RedisCacheUtil cacheUtil;
     @Autowired
     private OrderService orderService;
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+    @Autowired
+    private FavoriteMapper favoriteMapper;
+    @Autowired
+    private AddressMapper addressMapper;
+    @Autowired
+    private CartMapper cartMapper;
 
     @Override
     public DashboardVO dashboard() {
@@ -125,6 +141,9 @@ public class AdminServiceImpl implements AdminService {
         User user = userService.getById(userId);
         if (user == null) {
             throw new BusinessException("用户不存在");
+        }
+        if ("SUPER_ADMIN".equals(user.getRole())) {
+            throw new BusinessException("不能修改超级管理员状态");
         }
         user.setStatus(status);
         userService.updateById(user);
@@ -306,6 +325,12 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
+    private void checkSuperAdmin() {
+        if (!UserContext.isSuperAdmin()) {
+            throw new BusinessException("仅超级管理员可执行此操作");
+        }
+    }
+
     // === 仲裁 + 订单/商品管理 ===
 
     @Override
@@ -347,5 +372,132 @@ public class AdminServiceImpl implements AdminService {
     public void deleteProduct(Long productId) {
         checkAdmin();
         productMapper.deleteById(productId);
+    }
+
+    // ===== 管理员管理（仅 SUPER_ADMIN） =====
+
+    @Override
+    public IPage<User> adminPage(Integer pageNum, Integer pageSize) {
+        checkSuperAdmin();
+        return userService.page(new Page<>(pageNum, pageSize),
+                new LambdaQueryWrapper<User>()
+                        .in(User::getRole, "ADMIN", "SUPER_ADMIN")
+                        .orderByDesc(User::getCreateTime));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String createAdmin(String username, String nickname) {
+        checkSuperAdmin();
+        long exists = userService.count(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        if (exists > 0) throw new BusinessException("用户名已存在");
+        String password = cn.hutool.core.util.RandomUtil.randomString(8);
+        User user = new User();
+        user.setUsername(username);
+        user.setNickname(nickname);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole("ADMIN");
+        user.setStatus(1);
+        user.setVerifyStatus("APPROVED");
+        userService.save(user);
+        return password;
+    }
+
+    @Override
+    public void updateAdmin(Long id, String nickname) {
+        checkSuperAdmin();
+        User user = userService.getById(id);
+        if (user == null || !"ADMIN".equals(user.getRole())) {
+            throw new BusinessException("管理员不存在");
+        }
+        user.setNickname(nickname);
+        userService.updateById(user);
+    }
+
+    @Override
+    public void deleteAdmin(Long id) {
+        checkSuperAdmin();
+        User user = userService.getById(id);
+        if (user == null) throw new BusinessException("管理员不存在");
+        if ("SUPER_ADMIN".equals(user.getRole())) throw new BusinessException("不能删除超级管理员");
+        if (user.getId().equals(UserContext.getUserId())) throw new BusinessException("不能删除自己");
+        userService.removeById(id);
+    }
+
+    @Override
+    public void updateAdminStatus(Long id, Integer status) {
+        checkSuperAdmin();
+        User user = userService.getById(id);
+        if (user == null) throw new BusinessException("管理员不存在");
+        if ("SUPER_ADMIN".equals(user.getRole())) throw new BusinessException("不能禁用超级管理员");
+        if (user.getId().equals(UserContext.getUserId())) throw new BusinessException("不能禁用自己");
+        user.setStatus(status);
+        userService.updateById(user);
+    }
+
+    // ===== 用户管理补全 =====
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createUser(String username, String password, String nickname, String role) {
+        checkAdmin();
+        if ("SUPER_ADMIN".equals(role)) throw new BusinessException("不能创建超级管理员");
+        long exists = userService.count(new LambdaQueryWrapper<User>().eq(User::getUsername, username));
+        if (exists > 0) throw new BusinessException("用户名已存在");
+        User user = new User();
+        user.setUsername(username);
+        user.setNickname(nickname);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole(role == null ? "USER" : role);
+        user.setStatus(1);
+        user.setVerifyStatus("APPROVED");
+        userService.save(user);
+    }
+
+    @Override
+    public void updateUser(Long id, String nickname, String phone, String email) {
+        checkAdmin();
+        User user = userService.getById(id);
+        if (user == null) throw new BusinessException("用户不存在");
+        user.setNickname(nickname);
+        user.setPhone(phone);
+        user.setEmail(email);
+        userService.updateById(user);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteUser(Long id) {
+        checkAdmin();
+        User user = userService.getById(id);
+        if (user == null) throw new BusinessException("用户不存在");
+        if ("SUPER_ADMIN".equals(user.getRole())) throw new BusinessException("不能删除超级管理员");
+        if (user.getId().equals(UserContext.getUserId())) throw new BusinessException("不能删除自己");
+
+        // 级联清理：商品下架、未完成订单取消、收藏/地址/购物车清除
+        productMapper.update(null, new LambdaUpdateWrapper<Product>()
+                .eq(Product::getUserId, id)
+                .set(Product::getStatus, "OFF_SHELF"));
+        orderMapper.update(null, new LambdaUpdateWrapper<Order>()
+                .in(Order::getStatus, "PENDING", "PAID", "SHIPPED")
+                .and(w -> w.eq(Order::getBuyerId, id).or().eq(Order::getSellerId, id))
+                .set(Order::getStatus, "CANCELLED"));
+        favoriteMapper.delete(new LambdaQueryWrapper<Favorite>().eq(Favorite::getUserId, id));
+        addressMapper.delete(new LambdaQueryWrapper<Address>().eq(Address::getUserId, id));
+        cartMapper.delete(new LambdaQueryWrapper<Cart>().eq(Cart::getUserId, id));
+
+        user.setStatus(2); // 已注销，防止再次登录
+        userService.updateById(user);
+        userService.removeById(id);
+    }
+
+    @Override
+    public void resetUserPassword(Long id) {
+        checkAdmin();
+        User user = userService.getById(id);
+        if (user == null) throw new BusinessException("用户不存在");
+        if ("SUPER_ADMIN".equals(user.getRole())) throw new BusinessException("不能重置超级管理员密码");
+        user.setPassword(passwordEncoder.encode(cn.hutool.core.util.RandomUtil.randomString(8)));
+        userService.updateById(user);
     }
 }

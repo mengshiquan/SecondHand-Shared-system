@@ -55,4 +55,24 @@ public interface AdminService {
     void updateProductStatus(Long productId, String status);
 
     void deleteProduct(Long productId);
+
+    // ===== 管理员管理（仅 SUPER_ADMIN） =====
+    IPage<User> adminPage(Integer pageNum, Integer pageSize);
+
+    String createAdmin(String username, String nickname);
+
+    void updateAdmin(Long id, String nickname);
+
+    void deleteAdmin(Long id);
+
+    void updateAdminStatus(Long id, Integer status);
+
+    // ===== 用户管理补全 =====
+    void createUser(String username, String password, String nickname, String role);
+
+    void updateUser(Long id, String nickname, String phone, String email);
+
+    void deleteUser(Long id);
+
+    void resetUserPassword(Long id);
 }
