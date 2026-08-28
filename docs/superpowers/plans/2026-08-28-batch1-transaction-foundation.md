@@ -22,7 +22,7 @@
 - Create: `sql/migration_batch1.sql`
 - Modify: `sql/schema.sql`（同步更新建表语句，保持新库可一键初始化）
 
-- [ ] **Step 1: 创建迁移脚本**
+- [x] **Step 1: 创建迁移脚本**
 
 ```sql
 -- 第一批功能增强迁移脚本
@@ -69,11 +69,11 @@ ALTER TABLE t_order ADD COLUMN refund_time   DATETIME     DEFAULT NULL COMMENT '
 ALTER TABLE t_order ADD COLUMN payment_time  DATETIME     DEFAULT NULL COMMENT '付款时间（预留模拟支付）';
 ```
 
-- [ ] **Step 2: 同步更新 `sql/schema.sql`**
+- [x] **Step 2: 同步更新 `sql/schema.sql`**
 
 在 `t_user` 建表语句的 `deleted` 字段前追加三列（与迁移脚本一致）；`t_order` 建表语句追加五列；文件末尾追加 `t_address` 和 `t_cart` 两张表的 CREATE 语句；初始化数据处将 `('admin', ..., 'ADMIN', 1)` 改为 `'SUPER_ADMIN'`。
 
-- [ ] **Step 3: 执行迁移并验证**
+- [x] **Step 3: 执行迁移并验证**
 
 ```bash
 mysql -uroot -p secondhand_db < sql/migration_batch1.sql
@@ -82,7 +82,7 @@ mysql -uroot -p -e "SHOW COLUMNS FROM t_user LIKE '%student%'; SELECT username,r
 
 预期：输出 `student_id` 列；admin 的 role 为 `SUPER_ADMIN`。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add sql/migration_batch1.sql sql/schema.sql

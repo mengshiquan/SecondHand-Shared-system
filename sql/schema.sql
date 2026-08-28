@@ -6,15 +6,18 @@ USE secondhand_db;
 CREATE TABLE IF NOT EXISTS t_user (
     id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '用户ID',
     username    VARCHAR(50)  NOT NULL UNIQUE COMMENT '用户名',
-    password    VARCHAR(64)  NOT NULL COMMENT '密码(MD5)',
+    password    VARCHAR(64)  NOT NULL COMMENT '密码(BCrypt)',
     nickname    VARCHAR(50)  NOT NULL COMMENT '昵称',
     avatar      VARCHAR(255) DEFAULT NULL COMMENT '头像',
     phone       VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
     email       VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
     role        VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色 USER/ADMIN',
-    status      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态 0-禁用 1-正常',
+    status      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态 0-禁用 1-正常 2-已注销',
     create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    student_id    VARCHAR(20)  DEFAULT NULL COMMENT '学号',
+    school_name   VARCHAR(100) DEFAULT NULL COMMENT '学校名称',
+    verify_status VARCHAR(20)  DEFAULT NULL COMMENT '认证状态 PENDING/APPROVED/REJECTED',
     deleted     TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
@@ -62,6 +65,11 @@ CREATE TABLE IF NOT EXISTS t_order (
     remark      VARCHAR(255)   DEFAULT NULL COMMENT '备注',
     create_time DATETIME       DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    address_id    BIGINT       DEFAULT NULL COMMENT '收货地址ID',
+    refund_status VARCHAR(20)  DEFAULT NULL COMMENT '退款状态',
+    refund_reason VARCHAR(255) DEFAULT NULL COMMENT '退款原因',
+    refund_time   DATETIME     DEFAULT NULL COMMENT '退款申请时间',
+    payment_time  DATETIME     DEFAULT NULL COMMENT '付款时间（预留模拟支付）',
     deleted     TINYINT        NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     INDEX idx_buyer (buyer_id),
     INDEX idx_seller (seller_id)
@@ -90,9 +98,14 @@ CREATE TABLE IF NOT EXISTS t_comment (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
 
 -- 初始化数据
+-- 密码使用 MD5 初始化，应用启动时 PasswordMigration 会自动迁移为 BCrypt
+-- admin/admin, student/123456
 INSERT INTO t_user (username, password, nickname, role, status) VALUES
-('admin', '21232f297a57a5a743894a0e4a801fc3', '管理员', 'ADMIN', 1),
+('admin', '21232f297a57a5a743894a0e4a801fc3', '管理员', 'SUPER_ADMIN', 1),
 ('student', 'e10adc3949ba59abbe56e057f20f883e', '校园同学', 'USER', 1);
+
+-- 存量用户默认已认证
+UPDATE t_user SET verify_status = 'APPROVED' WHERE verify_status IS NULL;
 
 -- 一级分类
 INSERT INTO t_category (id, name, icon, sort) VALUES
@@ -160,3 +173,27 @@ INSERT INTO t_category (name, parent_id, icon, sort) VALUES
 ('礼品/工艺品', 7, 'Collection', 2),
 ('票券/卡券', 7, 'Ticket', 3),
 ('其他', 7, 'More', 4);
+
+-- 收货地址表
+CREATE TABLE IF NOT EXISTS t_address (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '地址ID',
+    user_id       BIGINT       NOT NULL COMMENT '所属用户ID',
+    receiver_name VARCHAR(50)  NOT NULL COMMENT '收货人姓名',
+    phone         VARCHAR(20)  NOT NULL COMMENT '手机号',
+    address       VARCHAR(255) NOT NULL COMMENT '详细地址',
+    is_default    TINYINT      NOT NULL DEFAULT 0 COMMENT '是否默认 0-否 1-是',
+    create_time   DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    update_time   DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted       TINYINT      NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    INDEX idx_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收货地址表';
+
+-- 购物车表
+CREATE TABLE IF NOT EXISTS t_cart (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '购物车项ID',
+    user_id     BIGINT   NOT NULL COMMENT '用户ID',
+    product_id  BIGINT   NOT NULL COMMENT '商品ID',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted     TINYINT  NOT NULL DEFAULT 0 COMMENT '逻辑删除',
+    UNIQUE KEY uk_user_product (user_id, product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='购物车表';
