@@ -105,7 +105,7 @@ git commit -m "feat(db): batch1 migration - address, cart, verify, refund column
 - Modify: `backend/src/main/java/com/campus/secondhand/service/AdminService.java` + `impl/AdminServiceImpl.java`
 - Modify: `backend/src/main/java/com/campus/secondhand/controller/AdminController.java`
 
-- [ ] **Step 1: User 实体新增字段**
+- [x] **Step 1: User 实体新增字段**
 
 在 `User.java` 的 `blacklistCount` 字段后追加：
 
@@ -120,7 +120,7 @@ git commit -m "feat(db): batch1 migration - address, cart, verify, refund column
     private String verifyStatus;
 ```
 
-- [ ] **Step 2: 认证校验工具方法**
+- [x] **Step 2: 认证校验工具方法**
 
 新建 `backend/src/main/java/com/campus/secondhand/common/VerifyGuard.java`：
 
@@ -148,7 +148,7 @@ public final class VerifyGuard {
 }
 ```
 
-- [ ] **Step 3: RegisterDTO 新增字段**
+- [x] **Step 3: RegisterDTO 新增字段**
 
 在 `RegisterDTO.java` 的 `email` 字段后追加：
 
@@ -164,7 +164,7 @@ public final class VerifyGuard {
 
 并导入 `import jakarta.validation.constraints.Pattern;`。
 
-- [ ] **Step 4: UserServiceImpl.register 写入认证字段**
+- [x] **Step 4: UserServiceImpl.register 写入认证字段**
 
 将 `register` 方法中的 `user.setStatus(1); save(user);` 改为：
 
@@ -176,7 +176,7 @@ public final class VerifyGuard {
 
 （DTO 的 studentId/schoolName 已由 BeanUtils.copyProperties 拷贝）
 
-- [ ] **Step 5: 写操作入口加认证守卫**
+- [x] **Step 5: 写操作入口加认证守卫**
 
 在以下四个 Service 的入口方法首行调用 `VerifyGuard.requireVerified(userService)`（需 `@Autowired UserService userService`）：
 
@@ -200,7 +200,7 @@ public final class VerifyGuard {
 
 注意：`UserServiceImpl` 内部不加守卫（避免循环依赖），`getCurrentUser`/资料修改不受限。
 
-- [ ] **Step 6: 管理员批量审核接口**
+- [x] **Step 6: 管理员批量审核接口**
 
 `AdminService.java` 追加：
 
@@ -253,7 +253,7 @@ public final class VerifyGuard {
         }
 ```
 
-- [ ] **Step 7: 编译验证**
+- [x] **Step 7: 编译验证**
 
 ```bash
 cd backend
@@ -262,7 +262,7 @@ mvn compile -q
 
 预期：无错误输出。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add backend/src
@@ -280,7 +280,7 @@ git commit -m "feat: campus identity verification (12-digit student ID) with wri
 - Create: `backend/src/main/java/com/campus/secondhand/service/impl/AddressServiceImpl.java`
 - Create: `backend/src/main/java/com/campus/secondhand/controller/AddressController.java`
 
-- [ ] **Step 1: Address 实体**
+- [x] **Step 1: Address 实体**
 
 ```java
 package com.campus.secondhand.entity;
@@ -325,7 +325,7 @@ public class Address {
 }
 ```
 
-- [ ] **Step 2: AddressMapper**
+- [x] **Step 2: AddressMapper**
 
 ```java
 package com.campus.secondhand.mapper;
@@ -339,7 +339,7 @@ public interface AddressMapper extends BaseMapper<Address> {
 }
 ```
 
-- [ ] **Step 3: AddressService 接口**
+- [x] **Step 3: AddressService 接口**
 
 ```java
 package com.campus.secondhand.service;
@@ -363,7 +363,7 @@ public interface AddressService extends IService<Address> {
 }
 ```
 
-- [ ] **Step 4: AddressServiceImpl**
+- [x] **Step 4: AddressServiceImpl**
 
 ```java
 package com.campus.secondhand.service.impl;
@@ -476,7 +476,7 @@ public class AddressServiceImpl extends ServiceImpl<AddressMapper, Address> impl
 }
 ```
 
-- [ ] **Step 5: AddressController**
+- [x] **Step 5: AddressController**
 
 ```java
 package com.campus.secondhand.controller;
@@ -535,7 +535,7 @@ public class AddressController {
 }
 ```
 
-- [ ] **Step 6: 编译验证 + Commit**
+- [x] **Step 6: 编译验证 + Commit**
 
 ```bash
 mvn compile -q
