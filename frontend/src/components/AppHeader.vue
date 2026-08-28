@@ -104,6 +104,11 @@
           </div>
         </el-popover>
 
+        <!-- 购物车入口（登录后可见） -->
+        <span v-if="userStore.isLoggedIn" class="bell-wrap" @click="router.push('/cart')">
+          <el-icon :size="22"><ShoppingCart /></el-icon>
+        </span>
+
         <el-button v-if="userStore.isLoggedIn" type="primary" class="hide-tablet" @click="router.push('/publish')">
           <el-icon><Plus /></el-icon>发布
         </el-button>
@@ -165,8 +170,8 @@
         <div class="contact-item">
           <el-icon :size="20" color="#10B981"><Clock /></el-icon>
           <div>
-            <span class="contact-label">工作时间</span>
-            <span class="contact-desc">工作日 9:00 - 18:00</span>
+            <span class="contact-label">工作日：周一 至 周五</span>
+            <span class="contact-desc">工作时间 9:00 - 18:00</span>
           </div>
         </div>
       </div>
@@ -236,6 +241,9 @@
                   <div class="menu-item" @click="mobileMenuOpen = false; router.push('/orders')">
                     <el-icon :size="18"><Document /></el-icon>我的订单
                   </div>
+                  <div class="menu-item" @click="mobileMenuOpen = false; router.push('/cart')">
+                    <el-icon :size="18"><ShoppingCart /></el-icon>购物车
+                  </div>
                   <div class="menu-item" @click="mobileMenuOpen = false; router.push('/notifications')">
                     <el-icon :size="18"><Bell /></el-icon>消息通知
                     <span v-if="userUnreadCount > 0" class="menu-badge">{{ userUnreadCount }}</span>
@@ -267,7 +275,7 @@
 <script setup>
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, ArrowDown, InfoFilled, ChatDotRound, QuestionFilled, Message, Clock, WarningFilled, EditPen, Bell, Menu, Close, HomeFilled, Goods, User, Document, Setting, SwitchButton } from '@element-plus/icons-vue'
+import { Search, ArrowDown, InfoFilled, ChatDotRound, QuestionFilled, Message, Clock, WarningFilled, EditPen, Bell, Menu, Close, HomeFilled, Goods, User, Document, Setting, SwitchButton, ShoppingCart } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { getUserBlacklistStatus } from '@/api/user'

@@ -106,8 +106,30 @@
             <el-icon :size="20"><Star /></el-icon>
             我的收藏
           </h2>
+          <div class="fav-toolbar">
+            <el-input
+              v-model="favoriteKeyword"
+              placeholder="搜索收藏的商品"
+              clearable
+              class="fav-search"
+              @keyup.enter="loadFavorites"
+              @clear="loadFavorites"
+            >
+              <template #append>
+                <el-button :icon="Search" @click="loadFavorites" />
+              </template>
+            </el-input>
+            <el-button v-if="favSelected.length" type="danger" plain @click="handleBatchUnfavorite">
+              批量取消收藏（{{ favSelected.length }}）
+            </el-button>
+          </div>
           <div v-if="favorites.length" class="profile-grid">
             <div v-for="item in favorites" :key="item.id" class="profile-card">
+              <el-checkbox
+                class="fav-check"
+                :model-value="favSelected.includes(item.id)"
+                @change="toggleFavSelect(item.id)"
+              />
               <ProductCard :product="item" />
             </div>
           </div>
@@ -115,6 +137,40 @@
             <el-icon :size="40"><Star /></el-icon>
             <p>还没有收藏商品</p>
             <el-button type="primary" @click="router.push('/products')">去逛逛</el-button>
+          </div>
+        </div>
+
+        <!-- 收货地址 -->
+        <div v-if="activeTab === 'address'" class="content-card">
+          <h2 class="content-title">
+            <el-icon :size="20"><Location /></el-icon>
+            收货地址
+          </h2>
+          <p class="content-desc">管理你的收货地址，结算时可快速选择</p>
+          <div class="address-toolbar">
+            <el-button type="primary" :icon="Plus" @click="openAddressDialog()">新增地址</el-button>
+          </div>
+          <el-table v-if="addresses.length" :data="addresses" stripe>
+            <el-table-column prop="receiverName" label="收货人" width="120" />
+            <el-table-column prop="phone" label="手机号" width="140" />
+            <el-table-column prop="address" label="收货地址" min-width="200" show-overflow-tooltip />
+            <el-table-column label="默认" width="80">
+              <template #default="{ row }">
+                <el-tag v-if="row.isDefault === 1" type="success" size="small">默认</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="230">
+              <template #default="{ row }">
+                <el-button size="small" @click="openAddressDialog(row)">编辑</el-button>
+                <el-button v-if="row.isDefault !== 1" size="small" type="primary" plain @click="handleSetDefault(row.id)">设默认</el-button>
+                <el-button size="small" type="danger" plain @click="handleDeleteAddress(row.id)">删除</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <div v-else class="empty-panel">
+            <el-icon :size="40"><Location /></el-icon>
+            <p>还没有收货地址</p>
+            <el-button type="primary" @click="openAddressDialog()">新增地址</el-button>
           </div>
         </div>
 
@@ -137,8 +193,66 @@
             </el-form-item>
           </el-form>
         </div>
+
+        <!-- 危险操作 -->
+        <div v-if="activeTab === 'danger'" class="content-card">
+          <h2 class="content-title">
+            <el-icon :size="20"><Warning /></el-icon>
+            注销账号
+          </h2>
+          <div class="danger-zone">
+            <div class="danger-item">
+              <div class="danger-info">
+                <h4>注销账号</h4>
+                <p>注销后你将无法登录，已发布的商品和订单记录将保留在平台。</p>
+              </div>
+              <el-button type="danger" plain size="small" @click="showDeactivateDialog = true">
+                注销账号
+              </el-button>
+            </div>
+          </div>
+        </div>
       </el-col>
     </el-row>
+
+    <!-- 注销确认对话框 -->
+    <el-dialog v-model="showDeactivateDialog" title="确认注销账号" width="420" :close-on-click-modal="false">
+      <div class="deactivate-dialog-body">
+        <el-alert type="error" :closable="false" show-icon style="margin-bottom: 16px">
+          此操作不可自行恢复！注销后你将无法使用此账号登录。
+        </el-alert>
+        <el-form label-width="70px">
+          <el-form-item label="密码确认">
+            <el-input v-model="deactivatePassword" type="password" show-password placeholder="请输入当前密码" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="showDeactivateDialog = false; deactivatePassword = ''">取消</el-button>
+        <el-button type="danger" :loading="deactivating" @click="handleDeactivate">确认注销</el-button>
+      </template>
+    </el-dialog>
+    <!-- 地址编辑弹窗 -->
+    <el-dialog v-model="addressDialogVisible" :title="addressForm.id ? '编辑地址' : '新增地址'" width="440px" :close-on-click-modal="false">
+      <el-form ref="addressFormRef" :model="addressForm" :rules="addressRules" label-width="80px">
+        <el-form-item label="收货人" prop="receiverName">
+          <el-input v-model="addressForm.receiverName" placeholder="请输入收货人姓名" maxlength="20" />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="addressForm.phone" placeholder="请输入手机号" />
+        </el-form-item>
+        <el-form-item label="详细地址" prop="address">
+          <el-input v-model="addressForm.address" type="textarea" :rows="2" placeholder="宿舍楼/快递点" maxlength="200" />
+        </el-form-item>
+        <el-form-item label="设为默认">
+          <el-switch v-model="addressForm.isDefault" :active-value="1" :inactive-value="0" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="addressDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="addressSaving" @click="saveAddress">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -146,11 +260,12 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Hide, Delete } from '@element-plus/icons-vue'
+import { Edit, Hide, Delete, Plus, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { updateProfile, updatePassword } from '@/api/user'
+import { updateProfile, updatePassword, deactivateAccount } from '@/api/user'
 import { getMyProducts, deleteProduct, offShelfProduct } from '@/api/product'
-import { getFavoriteList } from '@/api/favorite'
+import { getFavoriteList, removeFavoriteBatch } from '@/api/favorite'
+import { getAddressList, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/api/address'
 import { uploadFile } from '@/api/file'
 import ProductCard from '@/components/ProductCard.vue'
 
@@ -169,7 +284,9 @@ const navItems = [
   { key: 'info', label: '个人资料', icon: 'User' },
   { key: 'products', label: '我的发布', icon: 'Goods' },
   { key: 'favorites', label: '我的收藏', icon: 'Star' },
-  { key: 'password', label: '修改密码', icon: 'Lock' }
+  { key: 'address', label: '收货地址', icon: 'Location' },
+  { key: 'password', label: '修改密码', icon: 'Lock' },
+  { key: 'danger', label: '危险操作', icon: 'Warning' }
 ]
 
 const avatarUrl = computed(() => userInfo.value?.avatar || '')
@@ -196,9 +313,87 @@ const pwdForm = reactive({ oldPassword: '', newPassword: '' })
 async function loadData() {
   userInfo.value = await userStore.fetchUserInfo()
   Object.assign(profileForm, { nickname: userInfo.value.nickname, phone: userInfo.value.phone, email: userInfo.value.email })
-  const favRes = await getFavoriteList({ pageNum: 1, pageSize: 20 })
-  favorites.value = favRes.data.records
+  await loadFavorites()
   await loadMyProducts()
+  loadAddresses()
+}
+
+// ====== 收藏搜索 + 批量取消 ======
+const favoriteKeyword = ref('')
+const favSelected = ref([])
+
+async function loadFavorites() {
+  const favRes = await getFavoriteList({ pageNum: 1, pageSize: 20, keyword: favoriteKeyword.value || undefined })
+  favorites.value = favRes.data.records
+  favSelected.value = favSelected.value.filter(id => favorites.value.some(p => p.id === id))
+}
+
+function toggleFavSelect(id) {
+  const idx = favSelected.value.indexOf(id)
+  if (idx >= 0) favSelected.value.splice(idx, 1)
+  else favSelected.value.push(id)
+}
+
+async function handleBatchUnfavorite() {
+  await ElMessageBox.confirm(`确认取消收藏选中的 ${favSelected.value.length} 件商品？`, '提示', { type: 'warning' })
+  await removeFavoriteBatch(favSelected.value)
+  ElMessage.success('已取消收藏')
+  favSelected.value = []
+  loadFavorites()
+}
+
+// ====== 收货地址 ======
+const addresses = ref([])
+const addressDialogVisible = ref(false)
+const addressSaving = ref(false)
+const addressFormRef = ref(null)
+const addressForm = reactive({ id: null, receiverName: '', phone: '', address: '', isDefault: 0 })
+const addressRules = {
+  receiverName: [{ required: true, message: '请输入收货人', trigger: 'blur' }],
+  phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }, { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }],
+  address: [{ required: true, message: '请输入详细地址', trigger: 'blur' }]
+}
+
+async function loadAddresses() {
+  const res = await getAddressList()
+  addresses.value = res.data
+}
+
+function openAddressDialog(row) {
+  if (row) {
+    Object.assign(addressForm, { id: row.id, receiverName: row.receiverName, phone: row.phone, address: row.address, isDefault: row.isDefault })
+  } else {
+    Object.assign(addressForm, { id: null, receiverName: '', phone: '', address: '', isDefault: 0 })
+  }
+  addressDialogVisible.value = true
+}
+
+async function saveAddress() {
+  await addressFormRef.value.validate()
+  addressSaving.value = true
+  try {
+    if (addressForm.id) {
+      await updateAddress(addressForm.id, addressForm)
+    } else {
+      await addAddress(addressForm)
+    }
+    ElMessage.success('保存成功')
+    addressDialogVisible.value = false
+    loadAddresses()
+  } finally { addressSaving.value = false }
+}
+
+async function handleDeleteAddress(id) {
+  await ElMessageBox.confirm('确认删除该地址？', '提示', { type: 'warning' })
+  await deleteAddress(id)
+  ElMessage.success('删除成功')
+  loadAddresses()
+}
+
+async function handleSetDefault(id) {
+  await setDefaultAddress(id)
+  ElMessage.success('已设为默认地址')
+  loadAddresses()
 }
 
 async function loadMyProducts() {
@@ -232,6 +427,27 @@ async function handleDelete(id) {
   await deleteProduct(id)
   ElMessage.success('删除成功')
   loadMyProducts()
+}
+
+const showDeactivateDialog = ref(false)
+const deactivatePassword = ref('')
+const deactivating = ref(false)
+
+async function handleDeactivate() {
+  if (!deactivatePassword.value) { ElMessage.warning('请输入密码'); return }
+  deactivating.value = true
+  try {
+    await deactivateAccount({ password: deactivatePassword.value })
+    ElMessage.success('账号已注销')
+    showDeactivateDialog.value = false
+    deactivatePassword.value = ''
+    userStore.logout()
+    router.push('/login')
+  } catch (e) {
+    // request.js 已处理错误提示
+  } finally {
+    deactivating.value = false
+  }
 }
 
 onMounted(loadData)
@@ -346,7 +562,6 @@ onMounted(loadData)
   gap: 16px;
   align-items: start;
 }
-.profile-card { min-width: 0; }
 
 .product-actions {
   display: flex; flex-wrap: wrap; gap: 6px;
@@ -354,6 +569,23 @@ onMounted(loadData)
   justify-content: center;
   background: #F9FAFB; border-radius: 0 0 8px 8px;
 }
+
+/* 收藏工具栏 */
+.fav-toolbar {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.fav-search { max-width: 280px; }
+.profile-card { min-width: 0; position: relative; }
+.fav-check {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  background: rgba(255,255,255,0.9);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+/* 地址工具栏 */
+.address-toolbar { margin-bottom: 16px; }
 
 /* 空面板 */
 .empty-panel {
@@ -366,6 +598,33 @@ onMounted(loadData)
 .profile-pager {
   display: flex; justify-content: center;
   margin-top: 28px;
+}
+
+/* ====== 危险操作区 ====== */
+.danger-zone {
+  border: 1px solid #FCA5A5;
+  border-radius: 10px;
+  padding: 0;
+  overflow: hidden;
+}
+.danger-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  gap: 16px;
+}
+.danger-info h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #991B1B;
+}
+.danger-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.5;
 }
 
 /* ====== 响应式 ====== */

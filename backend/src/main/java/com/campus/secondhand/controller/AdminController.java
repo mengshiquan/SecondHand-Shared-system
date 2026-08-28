@@ -76,8 +76,9 @@ public class AdminController {
     public Result<IPage<OrderVO>> orders(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String status) {
-        return Result.success(adminService.orderPage(pageNum, pageSize, status));
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String refundStatus) {
+        return Result.success(adminService.orderPage(pageNum, pageSize, status, refundStatus));
     }
 
     /** 各分类商品数量统计 */

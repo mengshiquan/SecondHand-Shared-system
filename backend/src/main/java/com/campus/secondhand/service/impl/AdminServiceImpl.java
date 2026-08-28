@@ -161,9 +161,9 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public IPage<OrderVO> orderPage(Integer pageNum, Integer pageSize, String status) {
+    public IPage<OrderVO> orderPage(Integer pageNum, Integer pageSize, String status, String refundStatus) {
         checkAdmin();
-        return orderMapper.selectOrderPage(new Page<>(pageNum, pageSize), null, "ADMIN", status);
+        return orderMapper.selectOrderPage(new Page<>(pageNum, pageSize), null, "ADMIN", status, refundStatus);
     }
 
     @Override

@@ -195,7 +195,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     public IPage<OrderVO> pageList(Integer pageNum, Integer pageSize, String status) {
         Page<OrderVO> page = new Page<>(pageNum, pageSize);
-        return baseMapper.selectOrderPage(page, UserContext.getUserId(), UserContext.getRole(), status);
+        return baseMapper.selectOrderPage(page, UserContext.getUserId(), UserContext.getRole(), status, null);
     }
 
     @Override

@@ -65,27 +65,57 @@
         <template #label><el-icon><User /></el-icon> 用户管理</template>
         <div class="table-card">
           <div class="table-header">
-            <span>共 <strong>{{ users.length }}</strong> 个用户</span>
+            <span>共 <strong>{{ userTotal }}</strong> 个用户</span>
+            <div class="table-header-actions">
+              <el-button size="small" :type="pendingFilter ? 'warning' : 'default'" plain @click="togglePendingFilter">
+                {{ pendingFilter ? '查看全部' : '仅看待审核' }}
+              </el-button>
+              <el-button v-if="selectedVerifyUsers.length" size="small" type="success" @click="handleBatchVerify('APPROVE')">
+                批量通过（{{ selectedVerifyUsers.length }}）
+              </el-button>
+              <el-button v-if="selectedVerifyUsers.length" size="small" type="danger" plain @click="handleBatchVerify('REJECT')">
+                批量拒绝（{{ selectedVerifyUsers.length }}）
+              </el-button>
+              <el-button type="primary" size="small" :icon="Plus" @click="openUserDialog()">新增用户</el-button>
+            </div>
           </div>
-          <el-table :data="users" stripe>
-            <el-table-column prop="id" label="ID" width="80" />
-            <el-table-column prop="username" label="用户名" />
-            <el-table-column prop="nickname" label="昵称" />
-            <el-table-column prop="role" label="角色" width="100" />
-            <el-table-column prop="status" label="状态" width="100">
+          <el-table :data="users" stripe @selection-change="rows => selectedVerifyUsers = rows">
+            <el-table-column type="selection" width="44" :selectable="row => row.verifyStatus === 'PENDING'" />
+            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="username" label="用户名" min-width="110" />
+            <el-table-column prop="nickname" label="昵称" min-width="110" />
+            <el-table-column prop="role" label="角色" width="110">
+              <template #default="{ row }">
+                <el-tag v-if="row.role === 'SUPER_ADMIN'" type="danger" size="small" effect="plain">超级管理员</el-tag>
+                <el-tag v-else-if="row.role === 'ADMIN'" type="warning" size="small" effect="plain">管理员</el-tag>
+                <el-tag v-else size="small" effect="plain">用户</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="认证状态" width="110">
+              <template #default="{ row }">
+                <el-tag :type="verifyStatusType(row.verifyStatus)" size="small" effect="plain">
+                  {{ verifyStatusText(row.verifyStatus) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="90">
               <template #default="{ row }">
                 <el-tag :type="row.status === 1 ? 'success' : 'danger'" effect="plain">
                   {{ row.status === 1 ? '正常' : '禁用' }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="120">
+            <el-table-column label="操作" width="300">
               <template #default="{ row }">
+                <el-button size="small" @click="openUserEditDialog(row)">编辑</el-button>
+                <el-button size="small" type="warning" plain @click="handleResetPassword(row)">重置密码</el-button>
                 <el-button
                   size="small"
                   :type="row.status === 1 ? 'danger' : 'success'"
+                  :disabled="row.role === 'SUPER_ADMIN'"
                   @click="toggleUserStatus(row)"
                 >{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
+                <el-button size="small" type="danger" plain :disabled="row.role === 'SUPER_ADMIN'" @click="handleDeleteUser(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -111,8 +141,18 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="100">
+            <el-table-column label="操作" width="190">
               <template #default="{ row }">
+                <el-button
+                  v-if="row.status === 'ON_SALE'"
+                  size="small" type="warning" plain
+                  @click="toggleProductStatus(row, 'OFF_SHELF')"
+                >下架</el-button>
+                <el-button
+                  v-else-if="row.status === 'OFF_SHELF'"
+                  size="small" type="success" plain
+                  @click="toggleProductStatus(row, 'ON_SALE')"
+                >上架</el-button>
                 <el-button size="small" type="danger" plain @click="handleDeleteProduct(row.id)">删除</el-button>
               </template>
             </el-table-column>
@@ -126,11 +166,17 @@
         <div class="table-card">
           <div class="table-header">
             <span>共 <strong>{{ adminOrders.length }}</strong> 笔订单</span>
+            <div class="table-header-actions">
+              <el-checkbox v-model="arbitrationOnly" @change="loadAdminOrders">仅看待仲裁</el-checkbox>
+              <el-button size="small" @click="loadAdminOrders">刷新</el-button>
+            </div>
           </div>
           <el-table :data="adminOrders" stripe>
-            <el-table-column prop="orderNo" label="订单号" show-overflow-tooltip />
-            <el-table-column prop="productTitle" label="商品" show-overflow-tooltip />
-            <el-table-column prop="price" label="金额" width="100" />
+            <el-table-column prop="orderNo" label="订单号" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="productTitle" label="商品" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="price" label="金额" width="90" />
+            <el-table-column prop="buyerNickname" label="买家" width="100" />
+            <el-table-column prop="sellerName" label="卖家" width="100" />
             <el-table-column prop="status" label="状态" width="100">
               <template #default="{ row }">
                 <el-tag :type="orderStatusType(row.status)" effect="plain">
@@ -138,7 +184,40 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="createTime" label="创建时间" width="180" />
+            <el-table-column label="退款状态" width="130">
+              <template #default="{ row }">
+                <el-tag v-if="refundStatusText(row.refundStatus)" :type="refundStatusType(row.refundStatus)" size="small" effect="plain">
+                  {{ refundStatusText(row.refundStatus) }}
+                </el-tag>
+                <span v-else class="text-muted">-</span>
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="创建时间" width="165" />
+            <el-table-column label="操作" width="260" fixed="right">
+              <template #default="{ row }">
+                <template v-if="row.refundStatus === 'ARBITRATION'">
+                  <el-button size="small" type="danger" @click="handleArbitrate(row, true)">退款</el-button>
+                  <el-button size="small" @click="handleArbitrate(row, false)">维持</el-button>
+                </template>
+                <template v-else>
+                  <el-button
+                    v-if="row.status !== 'COMPLETED' && row.status !== 'CANCELLED'"
+                    size="small" type="success" plain
+                    @click="forceOrderStatus(row, 'COMPLETED')"
+                  >强制完成</el-button>
+                  <el-button
+                    v-if="row.status !== 'COMPLETED' && row.status !== 'CANCELLED'"
+                    size="small" type="warning" plain
+                    @click="forceOrderStatus(row, 'CANCELLED')"
+                  >强制取消</el-button>
+                  <el-button
+                    v-if="row.status === 'COMPLETED' || row.status === 'CANCELLED'"
+                    size="small" type="danger" plain
+                    @click="handleDeleteAdminOrder(row.id)"
+                  >删除</el-button>
+                </template>
+              </template>
+            </el-table-column>
           </el-table>
         </div>
       </el-tab-pane>
@@ -256,9 +335,137 @@
           </el-table>
         </div>
       </el-tab-pane>
-    </el-tabs>
 
-    <!-- 分类编辑弹窗 -->
+      <!-- 管理员管理（仅超级管理员） -->
+      <el-tab-pane v-if="isSuperAdmin" name="admins">
+        <template #label><el-icon><Avatar /></el-icon> 管理员管理</template>
+        <div class="table-card">
+          <div class="table-header">
+            <span>共 <strong>{{ admins.length }}</strong> 个管理员</span>
+            <el-button type="primary" size="small" :icon="Plus" @click="openAdminDialog()">新增管理员</el-button>
+          </div>
+          <el-table :data="admins" stripe>
+            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="username" label="用户名" min-width="120" />
+            <el-table-column prop="nickname" label="昵称" min-width="120" />
+            <el-table-column label="角色" width="110">
+              <template #default="{ row }">
+                <el-tag v-if="row.role === 'SUPER_ADMIN'" type="danger" size="small" effect="plain">超级管理员</el-tag>
+                <el-tag v-else type="warning" size="small" effect="plain">管理员</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="90">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'danger'" effect="plain">
+                  {{ row.status === 1 ? '正常' : '禁用' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="创建时间" width="165">
+              <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="260">
+              <template #default="{ row }">
+                <template v-if="row.role !== 'SUPER_ADMIN'">
+                  <el-button size="small" @click="openAdminEditDialog(row)">编辑</el-button>
+                  <el-button
+                    size="small"
+                    :type="row.status === 1 ? 'danger' : 'success'"
+                    @click="toggleAdminStatus(row)"
+                  >{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
+                  <el-button size="small" type="danger" plain @click="handleDeleteAdmin(row)">删除</el-button>
+                </template>
+                <span v-else class="text-muted">-</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </el-tab-pane>
+
+      <!-- 销售统计 -->
+      <el-tab-pane name="sales">
+        <template #label><el-icon><TrendCharts /></el-icon> 销售统计</template>
+        <div class="sales-toolbar">
+          <el-radio-group v-model="statsPeriod" @change="loadSalesStats">
+            <el-radio-button value="day">日</el-radio-button>
+            <el-radio-button value="week">周</el-radio-button>
+            <el-radio-button value="month">月</el-radio-button>
+          </el-radio-group>
+          <el-date-picker
+            v-model="statsRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            style="width: 260px"
+          />
+          <el-button type="primary" :loading="statsLoading" @click="loadSalesStats">查询</el-button>
+          <el-button :icon="Download" :loading="exporting" @click="handleExportSales">导出 Excel</el-button>
+        </div>
+
+        <el-row :gutter="20" v-loading="statsLoading">
+          <el-col :xs="12" :sm="6">
+            <div class="stat-card stat-orders">
+              <div class="stat-icon-bg"><el-icon :size="24"><Document /></el-icon></div>
+              <div class="stat-value">{{ statsData?.totalCount ?? 0 }}</div>
+              <div class="stat-label">成交笔数</div>
+            </div>
+          </el-col>
+          <el-col :xs="12" :sm="6">
+            <div class="stat-card stat-today">
+              <div class="stat-icon-bg"><el-icon :size="24"><Money /></el-icon></div>
+              <div class="stat-value">¥{{ formatAmount(statsData?.totalAmount) }}</div>
+              <div class="stat-label">成交总额</div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :xs="24" :lg="12">
+            <div class="chart-card">
+              <div class="chart-card-header"><span class="chart-title">分类销售额占比</span></div>
+              <div id="salesPieBox" class="chart-box"></div>
+            </div>
+          </el-col>
+          <el-col :xs="24" :lg="12">
+            <div class="chart-card">
+              <div class="chart-card-header"><span class="chart-title">卖家销量排行</span></div>
+              <div id="salesBarBox" class="chart-box"></div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <div class="table-card">
+          <div class="table-header">
+            <span>成交明细 共 <strong>{{ statsData?.rows?.length || 0 }}</strong> 条</span>
+          </div>
+          <el-table :data="pagedSalesRows" stripe>
+            <el-table-column label="成交时间" width="165">
+              <template #default="{ row }">{{ formatTime(row.dealTime) }}</template>
+            </el-table-column>
+            <el-table-column prop="orderNo" label="订单编号" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="productTitle" label="商品标题" min-width="160" show-overflow-tooltip />
+            <el-table-column prop="categoryName" label="分类" width="110" />
+            <el-table-column prop="sellerNickname" label="卖家" width="110" />
+            <el-table-column prop="buyerNickname" label="买家" width="110" />
+            <el-table-column label="成交额" width="100">
+              <template #default="{ row }">¥{{ formatAmount(row.price) }}</template>
+            </el-table-column>
+          </el-table>
+          <div class="sales-pager" v-if="(statsData?.rows?.length || 0) > salesPageSize">
+            <el-pagination
+              v-model:current-page="salesPage"
+              :page-size="salesPageSize"
+              :total="statsData.rows.length"
+              layout="prev, pager, next"
+              background
+              small
+            />
+          </div>
+        </div>
+      </el-tab-pane>
+    </el-tabs>
     <el-dialog v-model="categoryDialogVisible" :title="categoryForm.id ? '编辑分类' : '新增分类'" width="400px">
       <el-form :model="categoryForm" label-width="60px">
         <el-form-item label="名称">
@@ -273,30 +480,170 @@
         <el-button type="primary" @click="saveCategoryForm">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- 新增用户弹窗 -->
+    <el-dialog v-model="userDialogVisible" title="新增用户" width="420px" :close-on-click-modal="false">
+      <el-form ref="userFormRef" :model="userForm" :rules="userRules" label-width="70px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="userForm.username" placeholder="3-20字符" />
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="userForm.password" type="password" show-password placeholder="6-20字符" />
+        </el-form-item>
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="userForm.nickname" placeholder="请输入昵称" />
+        </el-form-item>
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="userForm.role" style="width: 100%">
+            <el-option label="普通用户" value="USER" />
+            <el-option label="管理员" value="ADMIN" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="userDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="userSaving" @click="saveUser">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑用户弹窗 -->
+    <el-dialog v-model="userEditDialogVisible" title="编辑用户" width="420px" :close-on-click-modal="false">
+      <el-form :model="userEditForm" label-width="70px">
+        <el-form-item label="昵称">
+          <el-input v-model="userEditForm.nickname" placeholder="请输入昵称" />
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input v-model="userEditForm.phone" placeholder="请输入手机号" />
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="userEditForm.email" placeholder="请输入邮箱" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="userEditDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="userSaving" @click="saveUserEdit">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 新增管理员弹窗 -->
+    <el-dialog v-model="adminDialogVisible" title="新增管理员" width="420px" :close-on-click-modal="false">
+      <el-form ref="adminFormRef" :model="adminForm" :rules="adminRules" label-width="70px">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="adminForm.username" placeholder="登录用户名" />
+        </el-form-item>
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="adminForm.nickname" placeholder="显示昵称" />
+        </el-form-item>
+      </el-form>
+      <div class="contact-hint">
+        <el-icon><InfoFilled /></el-icon>
+        创建成功后系统将自动生成初始密码，请及时告知本人。
+      </div>
+      <template #footer>
+        <el-button @click="adminDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="adminSaving" @click="saveAdmin">创建</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 编辑管理员弹窗 -->
+    <el-dialog v-model="adminEditDialogVisible" title="编辑管理员" width="420px" :close-on-click-modal="false">
+      <el-form :model="adminEditForm" label-width="70px">
+        <el-form-item label="昵称">
+          <el-input v-model="adminEditForm.nickname" placeholder="请输入昵称" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="adminEditDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="adminSaving" @click="saveAdminEdit">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { DataAnalysis, Grid, Plus, WarningFilled, Bell } from '@element-plus/icons-vue'
+import { DataAnalysis, Grid, Plus, WarningFilled, Bell, Download } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import {
   getDashboard, getAdminUsers, updateUserStatus,
   getAdminProducts, getAdminOrders, saveCategory, deleteCategory,
   getBlacklist, unblacklistUser, triggerBlacklistScan,
   getAdminComplaints, handleComplaint,
-  getAdminAppeals, handleAppeal
+  getAdminAppeals, handleAppeal,
+  getAdminList, createAdmin, updateAdmin, deleteAdmin, updateAdminStatus,
+  createUser, updateUser, deleteUser, resetUserPassword, verifyUsers,
+  updateProductStatus, deleteAdminProduct,
+  updateAdminOrderStatus, deleteAdminOrder, arbitrateOrder
 } from '@/api/admin'
+import { getSalesStats, exportSales } from '@/api/stats'
 import { getCategoryList } from '@/api/category'
-import { deleteProduct } from '@/api/product'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
+const isSuperAdmin = computed(() => userStore.userInfo?.role === 'SUPER_ADMIN')
 
 const activeTab = ref('dashboard')
 const dashboard = ref(null)
 const users = ref([])
+const userTotal = ref(0)
 const adminProducts = ref([])
 const adminOrders = ref([])
 const categories = ref([])
+
+// 用户管理：待审核筛选 + 批量审核 + 新增/编辑/删除/重置密码
+const pendingFilter = ref(false)
+const selectedVerifyUsers = ref([])
+const userDialogVisible = ref(false)
+const userEditDialogVisible = ref(false)
+const userSaving = ref(false)
+const userFormRef = ref(null)
+const userForm = reactive({ username: '', password: '', nickname: '', role: 'USER' })
+const userRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '长度为3-20个字符', trigger: 'blur' }
+  ],
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '长度为6-20个字符', trigger: 'blur' }
+  ],
+  nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }]
+}
+const userEditForm = reactive({ id: null, nickname: '', phone: '', email: '' })
+
+// 订单管理：仲裁筛选 + 强制状态 + 删除 + 仲裁处理
+const arbitrationOnly = ref(false)
+
+// 管理员管理
+const admins = ref([])
+const adminDialogVisible = ref(false)
+const adminEditDialogVisible = ref(false)
+const adminSaving = ref(false)
+const adminFormRef = ref(null)
+const adminForm = reactive({ username: '', nickname: '' })
+const adminRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 3, max: 20, message: '长度为3-20个字符', trigger: 'blur' }
+  ],
+  nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }]
+}
+const adminEditForm = reactive({ id: null, nickname: '' })
+
+// 销售统计
+const statsPeriod = ref('day')
+const statsRange = ref(null)
+const statsData = ref(null)
+const statsLoading = ref(false)
+const exporting = ref(false)
+const salesPage = ref(1)
+const salesPageSize = 10
+const pagedSalesRows = computed(() =>
+  (statsData.value?.rows || []).slice((salesPage.value - 1) * salesPageSize, salesPage.value * salesPageSize)
+)
+let salesPieChart = null
+let salesBarChart = null
 
 const categoryDialogVisible = ref(false)
 const categoryForm = reactive({ id: null, name: '', sort: 0 })
@@ -419,11 +766,85 @@ function initBarChart(dom) {
 function handleResize() {
   pieChart?.resize()
   barChart?.resize()
+  salesPieChart?.resize()
+  salesBarChart?.resize()
 }
 
 async function loadUsers() {
-  const res = await getAdminUsers({ pageNum: 1, pageSize: 50 })
+  const res = await getAdminUsers({ pageNum: 1, pageSize: 50, verifyStatus: pendingFilter.value ? 'PENDING' : undefined })
   users.value = res.data.records
+  userTotal.value = res.data.total
+}
+
+function togglePendingFilter() {
+  pendingFilter.value = !pendingFilter.value
+  loadUsers()
+}
+
+function verifyStatusText(s) {
+  const map = { PENDING: '待审核', APPROVED: '已认证', REJECTED: '已拒绝' }
+  return map[s] || '未提交'
+}
+function verifyStatusType(s) {
+  const map = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
+  return map[s] || 'info'
+}
+
+async function handleBatchVerify(action) {
+  const ids = selectedVerifyUsers.value.map(u => u.id)
+  const tip = action === 'APPROVE' ? '通过' : '拒绝'
+  await ElMessageBox.confirm(`确认${tip}选中的 ${ids.length} 个用户的认证申请？`, '批量审核', { type: 'warning' })
+  await verifyUsers(ids, action)
+  ElMessage.success(`已批量${tip}`)
+  loadUsers()
+}
+
+function openUserDialog() {
+  Object.assign(userForm, { username: '', password: '', nickname: '', role: 'USER' })
+  userDialogVisible.value = true
+}
+
+async function saveUser() {
+  await userFormRef.value.validate()
+  userSaving.value = true
+  try {
+    await createUser(userForm)
+    ElMessage.success('用户创建成功')
+    userDialogVisible.value = false
+    loadUsers()
+  } finally { userSaving.value = false }
+}
+
+function openUserEditDialog(row) {
+  Object.assign(userEditForm, { id: row.id, nickname: row.nickname || '', phone: row.phone || '', email: row.email || '' })
+  userEditDialogVisible.value = true
+}
+
+async function saveUserEdit() {
+  userSaving.value = true
+  try {
+    await updateUser(userEditForm.id, {
+      nickname: userEditForm.nickname,
+      phone: userEditForm.phone,
+      email: userEditForm.email
+    })
+    ElMessage.success('保存成功')
+    userEditDialogVisible.value = false
+    loadUsers()
+  } finally { userSaving.value = false }
+}
+
+async function handleResetPassword(row) {
+  await ElMessageBox.confirm(`确认重置用户「${row.username}」的密码？`, '重置密码', { type: 'warning' })
+  await resetUserPassword(row.id)
+  ElMessage.success('密码已重置')
+}
+
+async function handleDeleteUser(row) {
+  await ElMessageBox.confirm(`确认删除用户「${row.username}」？其商品将下架，未完成订单将取消。`, '删除用户', { type: 'warning' })
+  await deleteUser(row.id)
+  ElMessage.success('删除成功')
+  loadUsers()
 }
 
 async function loadAdminProducts() {
@@ -432,7 +853,7 @@ async function loadAdminProducts() {
 }
 
 async function loadAdminOrders() {
-  const res = await getAdminOrders({ pageNum: 1, pageSize: 50 })
+  const res = await getAdminOrders({ pageNum: 1, pageSize: 50, refundStatus: arbitrationOnly.value ? 'ARBITRATION' : undefined })
   adminOrders.value = res.data.records
 }
 
@@ -448,11 +869,219 @@ async function toggleUserStatus(row) {
   loadUsers()
 }
 
+async function toggleProductStatus(row, status) {
+  await updateProductStatus(row.id, status)
+  ElMessage.success(status === 'ON_SALE' ? '已上架' : '已下架')
+  loadAdminProducts()
+}
+
 async function handleDeleteProduct(id) {
   await ElMessageBox.confirm('确认删除？', '提示', { type: 'warning' })
-  await deleteProduct(id)
+  await deleteAdminProduct(id)
   ElMessage.success('删除成功')
   loadAdminProducts()
+}
+
+// === 订单管理：强制状态/删除/仲裁 ===
+function refundStatusText(s) {
+  const map = {
+    REQUESTED: '退款待处理', SELLER_AGREED: '卖家已同意', SELLER_REJECTED: '卖家已拒绝',
+    ARBITRATION: '仲裁中', ARBITRATION_REFUND: '仲裁退款', ARBITRATION_MAINTAIN: '仲裁维持'
+  }
+  return s && s !== 'NONE' ? (map[s] || s) : ''
+}
+function refundStatusType(s) {
+  const map = {
+    REQUESTED: 'warning', SELLER_AGREED: 'success', SELLER_REJECTED: 'danger',
+    ARBITRATION: 'danger', ARBITRATION_REFUND: 'warning', ARBITRATION_MAINTAIN: 'info'
+  }
+  return map[s] || 'info'
+}
+
+async function forceOrderStatus(row, status) {
+  const tip = status === 'COMPLETED' ? '强制完成' : '强制取消'
+  await ElMessageBox.confirm(`确认${tip}订单 ${row.orderNo}？`, '管理员操作', { type: 'warning' })
+  await updateAdminOrderStatus(row.id, status)
+  ElMessage.success(`已${tip}`)
+  loadAdminOrders()
+}
+
+async function handleDeleteAdminOrder(id) {
+  await ElMessageBox.confirm('确认删除该订单？', '提示', { type: 'warning' })
+  await deleteAdminOrder(id)
+  ElMessage.success('删除成功')
+  loadAdminOrders()
+}
+
+async function handleArbitrate(row, refund) {
+  const tip = refund ? '判定退款（订单取消，商品恢复在售）' : '维持交易（订单继续）'
+  await ElMessageBox.confirm(`确认对订单 ${row.orderNo} ${tip}？`, '仲裁处理', { type: 'warning' })
+  await arbitrateOrder(row.id, refund)
+  ElMessage.success(refund ? '已判定退款' : '已维持交易')
+  loadAdminOrders()
+}
+
+// === 管理员管理 ===
+async function loadAdmins() {
+  const res = await getAdminList({ pageNum: 1, pageSize: 50 })
+  admins.value = res.data.records
+}
+
+function openAdminDialog() {
+  Object.assign(adminForm, { username: '', nickname: '' })
+  adminDialogVisible.value = true
+}
+
+async function saveAdmin() {
+  await adminFormRef.value.validate()
+  adminSaving.value = true
+  try {
+    const res = await createAdmin(adminForm)
+    adminDialogVisible.value = false
+    ElMessageBox.alert(`管理员创建成功，初始密码：${res.data.password}`, '初始密码', {
+      confirmButtonText: '我已记录',
+      type: 'success'
+    })
+    loadAdmins()
+  } finally { adminSaving.value = false }
+}
+
+function openAdminEditDialog(row) {
+  Object.assign(adminEditForm, { id: row.id, nickname: row.nickname || '' })
+  adminEditDialogVisible.value = true
+}
+
+async function saveAdminEdit() {
+  adminSaving.value = true
+  try {
+    await updateAdmin(adminEditForm.id, { nickname: adminEditForm.nickname })
+    ElMessage.success('保存成功')
+    adminEditDialogVisible.value = false
+    loadAdmins()
+  } finally { adminSaving.value = false }
+}
+
+async function toggleAdminStatus(row) {
+  const newStatus = row.status === 1 ? 0 : 1
+  await updateAdminStatus(row.id, newStatus)
+  ElMessage.success('操作成功')
+  loadAdmins()
+}
+
+async function handleDeleteAdmin(row) {
+  await ElMessageBox.confirm(`确认删除管理员「${row.username}」？`, '删除管理员', { type: 'warning' })
+  await deleteAdmin(row.id)
+  ElMessage.success('删除成功')
+  loadAdmins()
+}
+
+// === 销售统计 ===
+function formatAmount(v) {
+  return Number(v || 0).toFixed(2)
+}
+
+async function loadSalesStats() {
+  statsLoading.value = true
+  try {
+    const params = { period: statsPeriod.value }
+    if (statsRange.value?.length === 2) {
+      params.startDate = statsRange.value[0]
+      params.endDate = statsRange.value[1]
+    }
+    const res = await getSalesStats(params)
+    statsData.value = res.data
+    salesPage.value = 1
+    await nextTick()
+    await new Promise(r => setTimeout(r, 100))
+    renderSalesCharts()
+  } finally { statsLoading.value = false }
+}
+
+function renderSalesCharts() {
+  const pieBox = document.getElementById('salesPieBox')
+  const barBox = document.getElementById('salesBarBox')
+  if (!pieBox || !barBox || pieBox.offsetParent === null) {
+    setTimeout(renderSalesCharts, 200)
+    return
+  }
+  initSalesPieChart(pieBox)
+  initSalesBarChart(barBox)
+}
+
+function initSalesPieChart(dom) {
+  if (salesPieChart) salesPieChart.dispose()
+  const byCategory = statsData.value?.byCategory || {}
+  const data = Object.entries(byCategory).map(([name, value]) => ({ name, value: Number(value) }))
+
+  salesPieChart = echarts.init(dom)
+  if (data.length === 0) {
+    salesPieChart.setOption({
+      title: { text: '暂无成交数据', left: 'center', top: 'center', textStyle: { color: '#9CA3AF', fontSize: 14 } }
+    })
+    return
+  }
+  salesPieChart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: ¥{c} ({d}%)' },
+    legend: { bottom: 0 },
+    color: ['#10B981', '#059669', '#34D399', '#6EE7B7', '#F59E0B', '#3B82F6', '#8B5CF6', '#A7F3D0'],
+    series: [{
+      type: 'pie',
+      radius: ['45%', '75%'],
+      center: ['50%', '45%'],
+      itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
+      label: { formatter: '{b}\n{d}%' },
+      data
+    }]
+  })
+}
+
+function initSalesBarChart(dom) {
+  if (salesBarChart) salesBarChart.dispose()
+  const bySeller = statsData.value?.bySeller || {}
+  const data = Object.entries(bySeller)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+
+  salesBarChart = echarts.init(dom)
+  if (data.length === 0) {
+    salesBarChart.setOption({
+      title: { text: '暂无成交数据', left: 'center', top: 'center', textStyle: { color: '#9CA3AF', fontSize: 14 } }
+    })
+    return
+  }
+  salesBarChart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: {c} 单' },
+    grid: { left: 40, right: 20, top: 20, bottom: 40 },
+    xAxis: { type: 'category', data: data.map(d => d[0]), axisLabel: { fontSize: 12, rotate: data.length > 5 ? 30 : 0 } },
+    yAxis: { type: 'value', minInterval: 1 },
+    series: [{
+      type: 'bar',
+      data: data.map(d => d[1]),
+      barMaxWidth: 48,
+      itemStyle: { color: '#10B981', borderRadius: [6, 6, 0, 0] }
+    }]
+  })
+}
+
+async function handleExportSales() {
+  exporting.value = true
+  try {
+    const params = {}
+    if (statsRange.value?.length === 2) {
+      params.startDate = statsRange.value[0]
+      params.endDate = statsRange.value[1]
+    }
+    const blob = await exportSales(params)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `销售统计_${new Date().toISOString().slice(0, 10)}.xlsx`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } finally { exporting.value = false }
 }
 
 function openCategoryDialog(row) {
@@ -567,6 +1196,8 @@ watch(activeTab, (tab) => {
   if (tab === 'categories') loadCategories()
   if (tab === 'blacklist') loadBlacklist()
   if (tab === 'reports') { loadComplaints(); loadAppeals() }
+  if (tab === 'admins') loadAdmins()
+  if (tab === 'sales') loadSalesStats()
 })
 
 onMounted(() => {
@@ -575,6 +1206,8 @@ onMounted(() => {
   if (activeTab.value === 'dashboard') loadDashboardData()
   else if (activeTab.value === 'blacklist') loadBlacklist()
   else if (activeTab.value === 'reports') { loadComplaints(); loadAppeals() }
+  else if (activeTab.value === 'admins') loadAdmins()
+  else if (activeTab.value === 'sales') loadSalesStats()
   window.addEventListener('resize', handleResize)
 })
 
@@ -582,6 +1215,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   pieChart?.dispose()
   barChart?.dispose()
+  salesPieChart?.dispose()
+  salesBarChart?.dispose()
 })
 </script>
 
@@ -661,8 +1296,27 @@ onBeforeUnmount(() => {
 .table-header {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 16px; font-size: 14px; color: #6B7280;
+  flex-wrap: wrap; gap: 10px;
 }
 .table-header strong { color: #10B981; font-weight: 700; }
+.table-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.text-muted { color: #9CA3AF; }
+
+/* ====== 销售统计 ====== */
+.sales-toolbar {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.sales-pager {
+  display: flex; justify-content: center;
+  margin-top: 16px;
+}
+.contact-hint {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; margin-top: 4px;
+  background: #F0FDF4; border-radius: 10px;
+  font-size: 13px; color: #059669;
+}
 
 /* ====== 响应式 ====== */
 @media (max-width: 768px) {

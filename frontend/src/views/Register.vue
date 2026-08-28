@@ -50,6 +50,12 @@
           <el-form-item prop="phone">
             <el-input v-model="form.phone" placeholder="手机号" prefix-icon="Phone" size="large" @focus="isTyping = true" @blur="isTyping = false" />
           </el-form-item>
+          <el-form-item prop="studentId">
+            <el-input v-model="form.studentId" placeholder="学号" prefix-icon="Postcard" size="large" maxlength="12" @focus="isTyping = true" @blur="isTyping = false" />
+          </el-form-item>
+          <el-form-item prop="schoolName">
+            <el-input v-model="form.schoolName" placeholder="学校名称" prefix-icon="School" size="large" maxlength="100" @focus="isTyping = true" @blur="isTyping = false" />
+          </el-form-item>
           
           <el-form-item>
             <el-button type="primary" size="large" style="width: 100%" :loading="loading" @click="handleRegister">
@@ -86,7 +92,9 @@ const form = reactive({
   nickname: '',
   password: '',
   confirmPassword: '',
-  phone: ''
+  phone: '',
+  studentId: '',
+  schoolName: ''
 })
 
 const validateConfirm = (rule, value, callback) => {
@@ -108,7 +116,9 @@ const rules = {
     { required: true, message: '请确认密码', trigger: 'blur' },
     { validator: validateConfirm, trigger: 'blur' }
   ],
-  phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }, { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }]
+  phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }, { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }],
+  studentId: [{ required: true, message: '请输入学号', trigger: 'blur' }],
+  schoolName: [{ required: true, message: '请输入学校名称', trigger: 'blur' }]
 }
 
 async function handleRegister() {
@@ -121,7 +131,9 @@ async function handleRegister() {
       username: form.username,
       nickname: form.nickname,
       password: form.password,
-      phone: form.phone
+      phone: form.phone,
+      studentId: form.studentId,
+      schoolName: form.schoolName
     })
     registerSuccess.value = true
     ElMessage.success('注册成功，请登录')

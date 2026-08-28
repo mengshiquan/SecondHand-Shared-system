@@ -124,6 +124,16 @@
                 @click="handleBuy"
               >立即购买</el-button>
               <el-button
+                v-if="product.status === 'ON_SALE' && !isOwner"
+                size="large"
+                plain
+                class="btn-cart"
+                @click="handleAddCart"
+              >
+                <el-icon><ShoppingCart /></el-icon>
+                加入购物车
+              </el-button>
+              <el-button
                 v-if="!isOwner && userStore.isLoggedIn"
                 :type="product.favorited ? 'warning' : ''"
                 size="large"
@@ -306,9 +316,10 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, Document, Share, ChatDotRound, InfoFilled, Shop, WarningFilled } from '@element-plus/icons-vue'
+import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, Document, Share, ChatDotRound, InfoFilled, Shop, WarningFilled, ShoppingCart } from '@element-plus/icons-vue'
 import { getProductDetail, getProductList } from '@/api/product'
 import { createOrder } from '@/api/order'
+import { addToCart } from '@/api/cart'
 import { toggleFavorite } from '@/api/favorite'
 import { getCommentList, addComment } from '@/api/comment'
 import { submitComplaint } from '@/api/complaint'
@@ -403,6 +414,12 @@ async function handleFavorite() {
   await toggleFavorite(product.value.id)
   product.value.favorited = !product.value.favorited
   ElMessage.success(product.value.favorited ? '收藏成功' : '已取消收藏')
+}
+
+async function handleAddCart() {
+  if (!userStore.isLoggedIn) { router.push('/login'); return }
+  await addToCart(product.value.id)
+  ElMessage.success('已加入购物车')
 }
 
 async function submitComment() {
@@ -648,6 +665,11 @@ onMounted(loadDetail)
 /* 操作 */
 .actions { display: flex; gap: 12px; }
 .btn-buy { flex: 1; height: 48px; font-size: 16px; font-weight: 700; }
+.btn-cart {
+  height: 48px; padding: 0 20px;
+  border-color: #10B981; color: #10B981; font-weight: 600;
+}
+.btn-cart:hover { background: #F0FDF4; }
 .btn-fav { height: 48px; }
 
 /* ====== 卖家其他商品 ====== */

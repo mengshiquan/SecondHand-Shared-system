@@ -8,7 +8,7 @@ export const useUserStore = defineStore('user', () => {
   const userInfo = ref(getUser())
 
   const isLoggedIn = computed(() => !!token.value)
-  const isAdmin = computed(() => userInfo.value?.role === 'ADMIN')
+  const isAdmin = computed(() => userInfo.value?.role === 'ADMIN' || userInfo.value?.role === 'SUPER_ADMIN')
 
   async function login(form) {
     const res = await loginApi(form)

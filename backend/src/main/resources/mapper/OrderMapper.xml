@@ -9,6 +9,7 @@
                bu.nickname AS buyer_nickname,
                o.seller_id, su.nickname AS seller_name,
                o.price, o.status, o.remark, o.expire_time,
+               o.refund_status, o.refund_reason, o.refund_time,
                o.create_time, o.update_time
         FROM t_order o
         LEFT JOIN t_product p ON o.product_id = p.id
@@ -21,6 +22,9 @@
         <if test="status != null and status != ''">
             AND o.status = #{status}
         </if>
+        <if test="refundStatus != null and refundStatus != ''">
+            AND o.refund_status = #{refundStatus}
+        </if>
         ORDER BY o.create_time DESC
     </select>
 
@@ -31,6 +35,7 @@
                bu.nickname AS buyer_nickname,
                o.seller_id, su.nickname AS seller_name,
                o.price, o.status, o.remark, o.expire_time,
+               o.refund_status, o.refund_reason, o.refund_time,
                o.create_time, o.update_time
         FROM t_order o
         LEFT JOIN t_product p ON o.product_id = p.id

@@ -20,7 +20,7 @@ public interface AdminService {
 
     IPage<ProductVO> productPage(Integer pageNum, Integer pageSize, String keyword);
 
-    IPage<OrderVO> orderPage(Integer pageNum, Integer pageSize, String status);
+    IPage<OrderVO> orderPage(Integer pageNum, Integer pageSize, String status, String refundStatus);
 
     void saveCategory(Category category);
 

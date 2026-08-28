@@ -70,3 +70,67 @@ export function handleAppeal(id, data) {
 export function getNotifications() {
   return request.get('/admin/notifications')
 }
+
+// === 管理员管理（仅超级管理员） ===
+export function getAdminList(params) {
+  return request.get('/admin/admins', { params })
+}
+
+export function createAdmin(data) {
+  return request.post('/admin/admins', data)
+}
+
+export function updateAdmin(id, data) {
+  return request.put(`/admin/admins/${id}`, data)
+}
+
+export function deleteAdmin(id) {
+  return request.delete(`/admin/admins/${id}`)
+}
+
+export function updateAdminStatus(id, status) {
+  return request.put(`/admin/admins/${id}/status`, { status })
+}
+
+// === 用户管理补全 ===
+export function createUser(data) {
+  return request.post('/admin/users', data)
+}
+
+export function updateUser(id, data) {
+  return request.put(`/admin/users/${id}`, data)
+}
+
+export function deleteUser(id) {
+  return request.delete(`/admin/users/${id}`)
+}
+
+export function resetUserPassword(id) {
+  return request.put(`/admin/users/${id}/reset-password`)
+}
+
+export function verifyUsers(userIds, action) {
+  return request.put('/admin/users/verify', { userIds, action })
+}
+
+// === 商品管理 ===
+export function updateProductStatus(id, status) {
+  return request.put(`/admin/products/${id}/status`, { status })
+}
+
+export function deleteAdminProduct(id) {
+  return request.delete(`/admin/products/${id}`)
+}
+
+// === 订单管理 ===
+export function updateAdminOrderStatus(id, status) {
+  return request.put(`/admin/orders/${id}/status`, { status })
+}
+
+export function deleteAdminOrder(id) {
+  return request.delete(`/admin/orders/${id}`)
+}
+
+export function arbitrateOrder(id, refund) {
+  return request.put(`/admin/order/${id}/arbitration`, { refund })
+}

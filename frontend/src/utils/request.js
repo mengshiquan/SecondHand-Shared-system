@@ -23,6 +23,10 @@ request.interceptors.request.use(
 // 响应拦截器：统一处理返回结果
 request.interceptors.response.use(
   (response) => {
+    // blob 流（如 Excel 导出）直接返回，不走 Result 解析
+    if (response.config.responseType === 'blob') {
+      return response.data
+    }
     const res = response.data
     if (res.code !== 200) {
       ElMessage.error(res.message || '请求失败')

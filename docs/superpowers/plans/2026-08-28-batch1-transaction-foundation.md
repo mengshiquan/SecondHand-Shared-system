@@ -1957,7 +1957,7 @@ git commit -m "feat: favorite batch remove and keyword search"
 
 **前端环境**：在 `frontend/` 目录下 `npm run build` 验证，主题色 `#10B981`。
 
-- [ ] **Step 1: API 模块**
+- [x] **Step 1: API 模块**
 
 新建 `frontend/src/api/address.js`：
 
@@ -2052,7 +2052,7 @@ export function removeFavoriteBatch(productIds) {
 }
 ```
 
-- [ ] **Step 2: 注册页改造（`frontend/src/views/Register.vue`）**
+- [x] **Step 2: 注册页改造（`frontend/src/views/Register.vue`）**
 
 在表单中密码字段后追加两个字段（不提示格式规则）：
 
@@ -2067,7 +2067,7 @@ export function removeFavoriteBatch(productIds) {
 
 在 `form` 响应式对象中增加 `studentId: ''`、`schoolName: ''`；提交时一并传入后端（后端 `@Pattern(^\d{12}$)` 校验，错误时后端返回"学号格式不正确"，`request.js` 已统一提示）。
 
-- [ ] **Step 3: 地址管理（`frontend/src/views/Profile.vue` 新 tab）**
+- [x] **Step 3: 地址管理（`frontend/src/views/Profile.vue` 新 tab）**
 
 1. `navItems` 数组追加 `{ key: 'address', label: '收货地址', icon: 'Location' }`（放在"我的收藏"之后）。
 2. 在"我的收藏"内容块之后、"修改密码"之前插入地址列表卡片：地址表格（收货人/手机号/地址/默认标记）+ 每行操作（编辑/删除/设默认）+ 顶部"新增地址"按钮。
@@ -2075,7 +2075,7 @@ export function removeFavoriteBatch(productIds) {
 4. 逻辑：新增后刷新列表；删除/设默认后 `ElMessage.success` 并刷新；错误由 `request.js` 统一提示。
 5. 导入 `import { getAddressList, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/api/address'`。
 
-- [ ] **Step 4: 购物车页（新建 `frontend/src/views/Cart.vue`）**
+- [x] **Step 4: 购物车页（新建 `frontend/src/views/Cart.vue`）**
 
 页面结构：
 - 顶部标题 + "清空购物车"按钮。
@@ -2084,7 +2084,7 @@ export function removeFavoriteBatch(productIds) {
 - 点击"去结算"：弹出地址选择 `el-dialog`（单选列表，默认选中 isDefault=1 的地址，无地址时提示去个人中心添加并附跳转按钮）→ 确认后调用 `checkoutCart({ cartItemIds, addressId })` → 成功提示"已创建 N 笔订单"并跳转 `/orders`。
 - 加载时调用 `getCartList()`。
 
-- [ ] **Step 5: 商品详情页加购（`frontend/src/views/ProductDetail.vue`）**
+- [x] **Step 5: 商品详情页加购（`frontend/src/views/ProductDetail.vue`）**
 
 在购买按钮旁增加"加入购物车"按钮（`el-button` plain 样式，icon=ShoppingCart）：
 
@@ -2099,7 +2099,7 @@ async function handleAddCart() {
 
 卖家视角（商品是自己发布的）隐藏该按钮。
 
-- [ ] **Step 6: 我的订单页退款操作（`frontend/src/views/MyOrders.vue`）**
+- [x] **Step 6: 我的订单页退款操作（`frontend/src/views/MyOrders.vue`）**
 
 1. 买家视角：
    - `PENDING` 状态增加"取消订单"按钮 → `cancelOrder(id)`。
@@ -2110,7 +2110,7 @@ async function handleAddCart() {
 4. `COMPLETED`/`CANCELLED` 状态增加"删除订单"按钮 → `ElMessageBox.confirm` 后 `deleteOrder(id)`。
 5. 操作完成后刷新列表。
 
-- [ ] **Step 7: 后台管理页增强（`frontend/src/views/Admin.vue`）**
+- [x] **Step 7: 后台管理页增强（`frontend/src/views/Admin.vue`）**
 
 1. **管理员管理 tab**（仅 role === 'SUPER_ADMIN' 显示）：管理员表格（用户名/昵称/状态/创建时间）+ 新增弹窗（用户名+昵称，成功后弹窗展示初始密码）+ 编辑/删除/启用禁用按钮。
 2. **用户管理增强**：表格增加"新增用户"按钮（用户名/密码/昵称/角色下拉 USER/ADMIN）、每行"编辑/删除/重置密码"按钮；认证列显示 verify_status 标签；"待审核"筛选按钮 + 批量通过/拒绝（多选）。
@@ -2124,7 +2124,7 @@ async function handleAddCart() {
    - 导出：`exportSales({ startDate, endDate })` 拿 blob 后 `URL.createObjectURL` + `<a download>` 触发下载。
 6. 收藏列表搜索：个人中心"我的收藏"增加搜索框，`getFavoriteList({ pageNum, pageSize, keyword })`。
 
-- [ ] **Step 8: 路由 + 头部导航**
+- [x] **Step 8: 路由 + 头部导航**
 
 `frontend/src/router/index.js` 主布局 children 中（`profile` 路由后）追加：
 
@@ -2136,7 +2136,7 @@ async function handleAddCart() {
 `AppHeader.vue` 导航栏（已登录时）增加购物车图标入口（icon=ShoppingCart，跳转 `/cart`）。
 `stores/user.js` 的 `isAdmin` 计算属性需同时兼容 `SUPER_ADMIN`：`role === 'ADMIN' || role === 'SUPER_ADMIN'`。
 
-- [ ] **Step 9: 构建验证 + Commit**
+- [x] **Step 9: 构建验证 + Commit**
 
 ```bash
 cd frontend

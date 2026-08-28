@@ -28,6 +28,7 @@ const routes = [
       { path: 'publish', name: 'PublishProduct', component: () => import('@/views/PublishProduct.vue'), meta: { requiresAuth: true } },
       { path: 'notifications', name: 'Notifications', component: () => import('@/views/Notifications.vue'), meta: { requiresAuth: true } },
       { path: 'profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { requiresAuth: true } },
+      { path: 'cart', name: 'Cart', component: () => import('@/views/Cart.vue'), meta: { requiresAuth: true } },
       { path: 'orders', name: 'MyOrders', component: () => import('@/views/MyOrders.vue'), meta: { requiresAuth: true } },
       { path: 'admin', name: 'Admin', component: () => import('@/views/Admin.vue'), meta: { requiresAuth: true, requiresAdmin: true } }
     ]
@@ -49,7 +50,7 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  if (to.meta.requiresAdmin && userStore.userInfo?.role !== 'ADMIN') {
+  if (to.meta.requiresAdmin && !userStore.isAdmin) {
     next('/')
     return
   }

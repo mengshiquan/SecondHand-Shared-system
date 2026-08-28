@@ -24,6 +24,9 @@
             <span v-if="order.status === 'PENDING' && countdown(order.expireTime)" class="countdown">
               {{ countdown(order.expireTime) }}
             </span>
+            <el-tag v-if="refundText(order.refundStatus)" :type="refundType(order.refundStatus)" size="small" effect="plain">
+              {{ refundText(order.refundStatus) }}
+            </el-tag>
             <el-tag :type="statusType(order.status)" size="small" effect="plain">{{ statusText(order.status) }}</el-tag>
           </div>
         </div>
@@ -56,7 +59,7 @@
               <el-button v-if="isBuyer(order)" type="primary" size="small" @click="handlePay(order.id)">
                 确认付款
               </el-button>
-              <el-button size="small" @click="handleCancel(order.id)">取消订单</el-button>
+              <el-button v-if="isBuyer(order)" size="small" @click="handleCancel(order.id)">取消订单</el-button>
             </template>
             <el-button v-if="order.status === 'PAID' && isSeller(order)" type="primary" size="small" @click="updateStatus(order.id, 'SHIPPED')">
               确认发货
@@ -64,6 +67,25 @@
             <el-button v-if="order.status === 'SHIPPED' && isBuyer(order)" type="success" size="small" @click="updateStatus(order.id, 'COMPLETED')">
               确认收货
             </el-button>
+            <el-button
+              v-if="isBuyer(order) && (order.status === 'PAID' || order.status === 'SHIPPED') && (!order.refundStatus || order.refundStatus === 'NONE')"
+              type="warning" plain size="small"
+              @click="handleApplyRefund(order.id)"
+            >申请退款</el-button>
+            <template v-if="isSeller(order) && order.refundStatus === 'REQUESTED'">
+              <el-button type="success" plain size="small" @click="handleRefundAction(order.id, true)">同意退款</el-button>
+              <el-button type="danger" plain size="small" @click="handleRefundAction(order.id, false)">拒绝退款</el-button>
+            </template>
+            <el-button
+              v-if="isBuyer(order) && order.refundStatus === 'SELLER_REJECTED'"
+              type="danger" plain size="small"
+              @click="handleArbitration(order.id)"
+            >申请仲裁</el-button>
+            <el-button
+              v-if="order.status === 'COMPLETED' || order.status === 'CANCELLED'"
+              type="info" plain size="small"
+              @click="handleDeleteOrder(order.id)"
+            >删除订单</el-button>
           </div>
         </div>
         <div class="order-time">{{ order.createTime }}</div>
@@ -95,7 +117,7 @@
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, Picture, User } from '@element-plus/icons-vue'
-import { getOrderList, payOrder, updateOrderStatus } from '@/api/order'
+import { getOrderList, payOrder, updateOrderStatus, cancelOrder, applyRefund, handleRefund, applyArbitration, deleteOrder } from '@/api/order'
 import { useUserStore } from '@/stores/user'
 
 const userStore = useUserStore()
@@ -116,9 +138,27 @@ const tabs = reactive([
 
 const statusMap = { PENDING: '待付款', PAID: '已付款', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消' }
 const statusTypeMap = { PENDING: 'warning', PAID: 'primary', SHIPPED: 'success', COMPLETED: 'success', CANCELLED: 'info' }
+const refundStatusMap = {
+  REQUESTED: '退款待处理',
+  SELLER_AGREED: '卖家已同意退款',
+  SELLER_REJECTED: '卖家已拒绝退款',
+  ARBITRATION: '仲裁中',
+  ARBITRATION_REFUND: '仲裁判定退款',
+  ARBITRATION_MAINTAIN: '仲裁维持交易'
+}
+const refundTypeMap = {
+  REQUESTED: 'warning',
+  SELLER_AGREED: 'success',
+  SELLER_REJECTED: 'danger',
+  ARBITRATION: 'danger',
+  ARBITRATION_REFUND: 'warning',
+  ARBITRATION_MAINTAIN: 'info'
+}
 
 function statusText(s) { return statusMap[s] || s }
 function statusType(s) { return statusTypeMap[s] || '' }
+function refundText(s) { return s && s !== 'NONE' ? (refundStatusMap[s] || s) : '' }
+function refundType(s) { return refundTypeMap[s] || 'warning' }
 function isBuyer(o) { return o.buyerId === userStore.userInfo?.userId }
 function isSeller(o) { return o.sellerId === userStore.userInfo?.userId }
 
@@ -159,8 +199,45 @@ async function handlePay(id) {
 
 async function handleCancel(id) {
   await ElMessageBox.confirm('确认取消订单？商品将重新上架。', '取消订单', { type: 'warning' })
-  await updateOrderStatus(id, 'CANCELLED')
+  await cancelOrder(id)
   ElMessage.success('已取消')
+  loadData(); loadAllCounts()
+}
+
+async function handleApplyRefund(id) {
+  let reason
+  try {
+    const { value } = await ElMessageBox.prompt('请输入退款原因', '申请退款', {
+      confirmButtonText: '提交申请',
+      cancelButtonText: '取消',
+      inputPlaceholder: '例如：不想要了 / 与卖家协商一致',
+      inputValidator: v => !!v?.trim() || '请填写退款原因'
+    })
+    reason = value.trim()
+  } catch { return }
+  await applyRefund(id, reason)
+  ElMessage.success('退款申请已提交，等待卖家处理')
+  loadData()
+}
+
+async function handleRefundAction(id, agree) {
+  await ElMessageBox.confirm(agree ? '确认同意退款？订单将取消，商品恢复在售。' : '确认拒绝买家的退款申请？', '处理退款', { type: 'warning' })
+  await handleRefund(id, agree)
+  ElMessage.success(agree ? '已同意退款' : '已拒绝退款')
+  loadData()
+}
+
+async function handleArbitration(id) {
+  await ElMessageBox.confirm('卖家已拒绝退款，确认申请平台仲裁？管理员将介入处理。', '申请仲裁', { type: 'warning' })
+  await applyArbitration(id)
+  ElMessage.success('已提交仲裁，请等待管理员处理')
+  loadData()
+}
+
+async function handleDeleteOrder(id) {
+  await ElMessageBox.confirm('确认删除该订单？删除后将不再显示。', '删除订单', { type: 'warning' })
+  await deleteOrder(id)
+  ElMessage.success('订单已删除')
   loadData(); loadAllCounts()
 }
 
