@@ -52,6 +52,21 @@ public class Order {
     /** 备注 */
     private String remark;
 
+    /** 收货地址ID */
+    private Long addressId;
+
+    /** 退款状态 */
+    private String refundStatus;
+
+    /** 退款原因 */
+    private String refundReason;
+
+    /** 退款申请时间 */
+    private LocalDateTime refundTime;
+
+    /** 付款时间（预留模拟支付） */
+    private LocalDateTime paymentTime;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

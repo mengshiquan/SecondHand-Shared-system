@@ -24,4 +24,7 @@ public class OrderDTO {
     private String buyerAddress;
 
     private String remark;
+
+    /** 收货地址ID（购物车结算时必传） */
+    private Long addressId;
 }

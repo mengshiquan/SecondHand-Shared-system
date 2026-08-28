@@ -13,6 +13,7 @@ import com.campus.secondhand.dto.OrderDTO;
 import com.campus.secondhand.entity.Order;
 import com.campus.secondhand.entity.Product;
 import com.campus.secondhand.mapper.OrderMapper;
+import com.campus.secondhand.service.AddressService;
 import com.campus.secondhand.service.OrderService;
 import com.campus.secondhand.service.ProductService;
 import com.campus.secondhand.service.UserService;
@@ -54,6 +55,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private TransactionTemplate transactionTemplate;
     @Autowired
     private UserService userService;
+    @Autowired
+    private AddressService addressService;
 
     @Override
     public OrderVO createOrder(OrderDTO dto) {
@@ -111,6 +114,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setStatus("PENDING");
         order.setExpireTime(LocalDateTime.now().plusMinutes(30));
         order.setRemark(dto.getRemark());
+        order.setAddressId(dto.getAddressId());
+        if (dto.getAddressId() != null) {
+            com.campus.secondhand.entity.Address address = addressService.getById(dto.getAddressId());
+            if (address != null && address.getUserId().equals(buyerId)) {
+                order.setBuyerName(address.getReceiverName());
+                order.setBuyerPhone(address.getPhone());
+                order.setBuyerAddress(address.getAddress());
+            }
+        }
         save(order);
 
         // CAS 条件更新：只有商品仍在售才下架（纵深防御，即使锁失效也不会超卖）
@@ -141,6 +153,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException("订单已超时，请重新下单");
         }
 
+        order.setPaymentTime(LocalDateTime.now());
         order.setStatus("PAID");
         updateById(order);
 
