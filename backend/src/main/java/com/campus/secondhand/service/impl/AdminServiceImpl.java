@@ -20,6 +20,7 @@ import com.campus.secondhand.service.AdminService;
 import com.campus.secondhand.service.BlacklistService;
 import com.campus.secondhand.service.CategoryService;
 import com.campus.secondhand.service.NotificationService;
+import com.campus.secondhand.service.OrderService;
 import com.campus.secondhand.service.UserService;
 import com.campus.secondhand.util.RedisCacheUtil;
 import com.campus.secondhand.util.UserContext;
@@ -59,6 +60,8 @@ public class AdminServiceImpl implements AdminService {
     private NotificationService notificationService;
     @Autowired
     private RedisCacheUtil cacheUtil;
+    @Autowired
+    private OrderService orderService;
 
     @Override
     public DashboardVO dashboard() {
@@ -301,5 +304,48 @@ public class AdminServiceImpl implements AdminService {
         if (!UserContext.isAdmin()) {
             throw new BusinessException("无管理员权限");
         }
+    }
+
+    // === 仲裁 + 订单/商品管理 ===
+
+    @Override
+    public void arbitrate(Long orderId, boolean refund) {
+        checkAdmin();
+        orderService.adminArbitrate(orderId, refund);
+    }
+
+    @Override
+    public void updateOrderStatus(Long orderId, String status) {
+        checkAdmin();
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) throw new BusinessException("订单不存在");
+        order.setStatus(status);
+        orderMapper.updateById(order);
+    }
+
+    @Override
+    public void deleteOrder(Long orderId) {
+        checkAdmin();
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) throw new BusinessException("订单不存在");
+        if (!"COMPLETED".equals(order.getStatus()) && !"CANCELLED".equals(order.getStatus())) {
+            throw new BusinessException("仅已完成或已取消的订单可删除");
+        }
+        orderMapper.deleteById(orderId);
+    }
+
+    @Override
+    public void updateProductStatus(Long productId, String status) {
+        checkAdmin();
+        Product product = productMapper.selectById(productId);
+        if (product == null) throw new BusinessException("商品不存在");
+        product.setStatus(status);
+        productMapper.updateById(product);
+    }
+
+    @Override
+    public void deleteProduct(Long productId) {
+        checkAdmin();
+        productMapper.deleteById(productId);
     }
 }

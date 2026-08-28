@@ -174,4 +174,41 @@ public class AdminController {
                 (String) params.get("handlerNote"));
         return Result.success();
     }
+
+    // === 仲裁 + 订单/商品管理 ===
+
+    /** 管理员仲裁退款 */
+    @PutMapping("/order/{id}/arbitration")
+    public Result<Void> arbitrate(@PathVariable Long id, @RequestBody Map<String, Boolean> params) {
+        adminService.arbitrate(id, Boolean.TRUE.equals(params.get("refund")));
+        return Result.success();
+    }
+
+    /** 管理员修改订单状态 */
+    @PutMapping("/orders/{id}/status")
+    public Result<Void> updateOrderStatus(@PathVariable Long id, @RequestBody Map<String, String> params) {
+        adminService.updateOrderStatus(id, params.get("status"));
+        return Result.success();
+    }
+
+    /** 管理员删除订单 */
+    @DeleteMapping("/orders/{id}")
+    public Result<Void> deleteOrder(@PathVariable Long id) {
+        adminService.deleteOrder(id);
+        return Result.success();
+    }
+
+    /** 管理员修改商品状态 */
+    @PutMapping("/products/{id}/status")
+    public Result<Void> updateProductStatus(@PathVariable Long id, @RequestBody Map<String, String> params) {
+        adminService.updateProductStatus(id, params.get("status"));
+        return Result.success();
+    }
+
+    /** 管理员删除商品 */
+    @DeleteMapping("/products/{id}")
+    public Result<Void> deleteProduct(@PathVariable Long id) {
+        adminService.deleteProduct(id);
+        return Result.success();
+    }
 }

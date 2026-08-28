@@ -44,4 +44,15 @@ public interface AdminService {
 
     // === 通知 ===
     java.util.Map<String, Object> getNotifications();
+
+    // === 仲裁 + 订单/商品管理 ===
+    void arbitrate(Long orderId, boolean refund);
+
+    void updateOrderStatus(Long orderId, String status);
+
+    void deleteOrder(Long orderId);
+
+    void updateProductStatus(Long productId, String status);
+
+    void deleteProduct(Long productId);
 }

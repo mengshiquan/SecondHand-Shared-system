@@ -17,4 +17,18 @@ public interface OrderService extends IService<Order> {
     IPage<OrderVO> pageList(Integer pageNum, Integer pageSize, String status);
 
     OrderVO detail(Long id);
+
+    void cancelOrder(Long id);
+
+    void applyRefund(Long id, String reason);
+
+    void handleRefund(Long id, boolean agree);
+
+    void applyArbitration(Long id);
+
+    void adminArbitrate(Long id, boolean refund);
+
+    void updateAddress(Long id, Long addressId);
+
+    void deleteOrder(Long id);
 }

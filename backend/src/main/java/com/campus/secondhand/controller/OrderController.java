@@ -55,4 +55,46 @@ public class OrderController {
         orderService.updateStatus(id, params.get("status"));
         return Result.success();
     }
+
+    /** 买家取消订单 */
+    @PostMapping("/{id}/cancel")
+    public Result<Void> cancel(@PathVariable Long id) {
+        orderService.cancelOrder(id);
+        return Result.success();
+    }
+
+    /** 买家申请退款 */
+    @PostMapping("/{id}/refund")
+    public Result<Void> applyRefund(@PathVariable Long id, @RequestBody Map<String, String> params) {
+        orderService.applyRefund(id, params.get("reason"));
+        return Result.success();
+    }
+
+    /** 卖家处理退款 */
+    @PutMapping("/{id}/refund/handle")
+    public Result<Void> handleRefund(@PathVariable Long id, @RequestBody Map<String, Boolean> params) {
+        orderService.handleRefund(id, Boolean.TRUE.equals(params.get("agree")));
+        return Result.success();
+    }
+
+    /** 买家申请仲裁 */
+    @PostMapping("/{id}/arbitration")
+    public Result<Void> arbitration(@PathVariable Long id) {
+        orderService.applyArbitration(id);
+        return Result.success();
+    }
+
+    /** 修改收货地址 */
+    @PutMapping("/{id}/address")
+    public Result<Void> updateAddress(@PathVariable Long id, @RequestBody Map<String, Long> params) {
+        orderService.updateAddress(id, params.get("addressId"));
+        return Result.success();
+    }
+
+    /** 删除已完成/已取消订单 */
+    @DeleteMapping("/{id}")
+    public Result<Void> delete(@PathVariable Long id) {
+        orderService.deleteOrder(id);
+        return Result.success();
+    }
 }
