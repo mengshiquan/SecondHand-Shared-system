@@ -2154,11 +2154,11 @@ git commit -m "feat(frontend): cart page, address management, refund ops, admin 
 
 ### Task 9: 全链路冒烟验证（人工）
 
-- [ ] **Step 1: 启动后端与前端**
+- [x] **Step 1: 启动后端与前端**
 
 按 `/run-dev` 技能启动（后端 `JAVA_HOME=D:\java\jdk17`，前端 `npm run dev`）。
 
-- [ ] **Step 2: 核心链路检查清单**
+- [x] **Step 2: 核心链路检查清单**
 
 | # | 验证项 | 预期 |
 |---|--------|------|
