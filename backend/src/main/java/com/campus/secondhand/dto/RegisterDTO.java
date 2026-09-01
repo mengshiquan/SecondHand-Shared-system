@@ -31,4 +31,12 @@ public class RegisterDTO {
     @NotBlank(message = "学校名称不能为空")
     @Size(max = 100, message = "学校名称过长")
     private String schoolName;
+
+    /** 验证码 key（对应 Redis 中的 captcha:{key}） */
+    @NotBlank(message = "请刷新验证码")
+    private String captchaKey;
+
+    /** 用户输入的验证码 */
+    @NotBlank(message = "请输入验证码")
+    private String captchaCode;
 }

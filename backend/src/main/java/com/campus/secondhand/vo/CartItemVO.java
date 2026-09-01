@@ -21,7 +21,12 @@ public class CartItemVO {
 
     private java.util.List<String> images;
 
+    /** 卖家 ID（前端按卖家分组展示） */
+    private Long sellerId;
+
     private String categoryName;
+
+    private Long categoryId;
 
     private String sellerNickname;
 

@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 /**
  * 商品模块接口
  */
@@ -39,6 +41,13 @@ public class ProductController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         productService.deleteProduct(id);
+        return Result.success();
+    }
+
+    /** 咨询卖家：消息以通知形式送达卖家 */
+    @PostMapping("/{id}/contact")
+    public Result<Void> contact(@PathVariable Long id, @RequestBody Map<String, String> params) {
+        productService.contactSeller(id, params.get("message"));
         return Result.success();
     }
 

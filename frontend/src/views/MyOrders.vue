@@ -9,7 +9,7 @@
       <el-tab-pane v-for="tab in tabs" :key="tab.key" :name="tab.key">
         <template #label>
           <span class="tab-label">{{ tab.label }}
-            <span v-if="tab.count" class="tab-badge">{{ tab.count }}</span>
+            <span v-if="tab.badge && tab.count" class="tab-badge">{{ tab.count > 99 ? '99+' : tab.count }}</span>
           </span>
         </template>
       </el-tab-pane>
@@ -24,10 +24,14 @@
             <span v-if="order.status === 'PENDING' && countdown(order.expireTime)" class="countdown">
               {{ countdown(order.expireTime) }}
             </span>
+            <el-tag v-if="order.payChannel" :type="order.payChannel === 'ALIPAY' ? 'primary' : 'success'" size="small" effect="plain">
+              {{ order.payChannel === 'ALIPAY' ? '支付宝' : '微信支付' }}
+            </el-tag>
             <el-tag v-if="refundText(order.refundStatus)" :type="refundType(order.refundStatus)" size="small" effect="plain">
               {{ refundText(order.refundStatus) }}
             </el-tag>
-            <el-tag :type="statusType(order.status)" size="small" effect="plain">{{ statusText(order.status) }}</el-tag>
+            <!-- 退款进行中时退款标签优先，不再同时展示订单状态标签，避免状态冲突观感 -->
+            <el-tag v-if="!refundActive(order)" :type="statusType(order.status)" size="small" effect="plain">{{ statusText(order.status) }}</el-tag>
           </div>
         </div>
 
@@ -56,15 +60,15 @@
 
           <div class="order-actions">
             <template v-if="order.status === 'PENDING'">
-              <el-button v-if="isBuyer(order)" type="primary" size="small" @click="handlePay(order.id)">
-                确认付款
+              <el-button v-if="isBuyer(order)" type="primary" size="small" @click="handlePay(order)">
+                支付
               </el-button>
               <el-button v-if="isBuyer(order)" size="small" @click="handleCancel(order.id)">取消订单</el-button>
             </template>
-            <el-button v-if="order.status === 'PAID' && isSeller(order)" type="primary" size="small" @click="updateStatus(order.id, 'SHIPPED')">
+            <el-button v-if="order.status === 'PAID' && isSeller(order) && !refundActive(order)" type="primary" size="small" @click="updateStatus(order.id, 'SHIPPED')">
               确认发货
             </el-button>
-            <el-button v-if="order.status === 'SHIPPED' && isBuyer(order)" type="success" size="small" @click="updateStatus(order.id, 'COMPLETED')">
+            <el-button v-if="order.status === 'SHIPPED' && isBuyer(order) && !refundActive(order)" type="success" size="small" @click="updateStatus(order.id, 'COMPLETED')">
               确认收货
             </el-button>
             <el-button
@@ -110,34 +114,81 @@
         @change="loadData"
       />
     </div>
+
+    <!-- 申请退款弹窗：原因分类选择 -->
+    <el-dialog v-model="refundDialogVisible" width="440px" :close-on-click-modal="false">
+      <template #header>
+        <div class="refund-dialog-header">
+          <el-icon :size="20" color="#F59E0B"><Warning /></el-icon>
+          <span>申请退款</span>
+        </div>
+      </template>
+      <el-form label-width="80px">
+        <el-form-item label="退款原因">
+          <el-select v-model="refundForm.category" placeholder="请选择退款原因" style="width: 100%">
+            <el-option v-for="r in refundReasons" :key="r" :label="r" :value="r" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="refundForm.category === '其他原因'" label="原因说明">
+          <el-input
+            v-model="refundForm.custom"
+            type="textarea"
+            :rows="3"
+            maxlength="200"
+            show-word-limit
+            placeholder="请具体说明退款原因，便于卖家与平台了解情况"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="refundDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="refundSubmitting" @click="submitRefund">提交申请</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 支付收银台：选渠道 → 扫码付款 → 支付成功 -->
+    <PayDialog v-model:visible="payVisible" :order="payingOrder" @paid="onPaid" />
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, Picture, User } from '@element-plus/icons-vue'
-import { getOrderList, payOrder, updateOrderStatus, cancelOrder, applyRefund, handleRefund, applyArbitration, deleteOrder } from '@/api/order'
+import { Document, Picture, User, Warning } from '@element-plus/icons-vue'
+import { getOrderList, getOrderStatusCounts, updateOrderStatus, cancelOrder, applyRefund, handleRefund, applyArbitration, deleteOrder } from '@/api/order'
+import PayDialog from '@/components/PayDialog.vue'
 import { useUserStore } from '@/stores/user'
 
+const route = useRoute()
 const userStore = useUserStore()
 const orders = ref([])
 const total = ref(0)
 const pageNum = ref(1)
 const pageSize = ref(10)
-const activeTab = ref('PENDING')
+// 支持从首页提醒条等处带 ?tab= 参数直达对应状态页签
+const VALID_TABS = ['PENDING', 'PAID', 'SHIPPED', 'COMPLETED', 'REFUND', 'CANCELLED']
+const activeTab = ref(VALID_TABS.includes(route.query.tab) ? route.query.tab : 'PENDING')
 let ticker = null
 
+// 退款申请弹窗状态：预设原因分类 + “其他原因”自定义输入
+const refundDialogVisible = ref(false)
+const refundOrderId = ref(null)
+const refundSubmitting = ref(false)
+const refundForm = reactive({ category: '', custom: '' })
+const refundReasons = ['不想要了', '与卖家协商一致', '地址填错', '商品不符', '行程不方便', '其他原因']
+
 const tabs = reactive([
-  { key: 'PENDING', label: '待付款', count: 0 },
-  { key: 'PAID', label: '已付款', count: 0 },
-  { key: 'SHIPPED', label: '已发货', count: 0 },
-  { key: 'COMPLETED', label: '已完成', count: 0 },
-  { key: 'CANCELLED', label: '已取消', count: 0 }
+  { key: 'PENDING', label: '待付款', count: 0, badge: true },
+  { key: 'PAID', label: '已付款', count: 0, badge: true },
+  { key: 'SHIPPED', label: '已发货', count: 0, badge: true },
+  { key: 'COMPLETED', label: '已完成', count: 0, badge: false },
+  { key: 'REFUND', label: '退款/售后', count: 0, badge: true },
+  { key: 'CANCELLED', label: '已取消', count: 0, badge: false }
 ])
 
-const statusMap = { PENDING: '待付款', PAID: '已付款', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消' }
-const statusTypeMap = { PENDING: 'warning', PAID: 'primary', SHIPPED: 'success', COMPLETED: 'success', CANCELLED: 'info' }
+const statusMap = { PENDING: '待付款', PAID: '已付款', SHIPPED: '已发货', COMPLETED: '已完成', REFUND: '退款/售后', CANCELLED: '已取消' }
+const statusTypeMap = { PENDING: 'warning', PAID: 'primary', SHIPPED: 'success', COMPLETED: 'success', REFUND: 'warning', CANCELLED: 'info' }
 const refundStatusMap = {
   REQUESTED: '退款待处理',
   SELLER_AGREED: '卖家已同意退款',
@@ -161,6 +212,8 @@ function refundText(s) { return s && s !== 'NONE' ? (refundStatusMap[s] || s) : 
 function refundType(s) { return refundTypeMap[s] || 'warning' }
 function isBuyer(o) { return o.buyerId === userStore.userInfo?.userId }
 function isSeller(o) { return o.sellerId === userStore.userInfo?.userId }
+// 退款进行中（待处理/仲裁中）：订单正常流转按钮与状态标签让位于退款处理
+function refundActive(o) { return o.refundStatus === 'REQUESTED' || o.refundStatus === 'ARBITRATION' }
 
 function countdown(expireTime) {
   if (!expireTime) return ''
@@ -182,18 +235,25 @@ async function loadData() {
 }
 
 async function loadAllCounts() {
-  for (const tab of tabs) {
-    try {
-      const res = await getOrderList({ pageNum: 1, pageSize: 1, status: tab.key })
-      tab.count = res.data.total || 0
-    } catch { tab.count = 0 }
-  }
+  // 单接口取三个状态的计数；角标持续提醒直至订单完成/取消后自然消失
+  try {
+    const res = await getOrderStatusCounts()
+    for (const tab of tabs) {
+      tab.count = tab.badge ? (res.data[tab.key] || 0) : 0
+    }
+  } catch {}
 }
 
-async function handlePay(id) {
-  await ElMessageBox.confirm('确认已与卖家沟通并同意购买？', '确认付款', { type: 'info' })
-  await payOrder(id)
-  ElMessage.success('付款成功')
+// 支付收银台状态
+const payVisible = ref(false)
+const payingOrder = ref(null)
+
+function handlePay(order) {
+  payingOrder.value = order
+  payVisible.value = true
+}
+
+function onPaid() {
   loadData(); loadAllCounts()
 }
 
@@ -205,19 +265,28 @@ async function handleCancel(id) {
 }
 
 async function handleApplyRefund(id) {
-  let reason
+  refundOrderId.value = id
+  refundForm.category = ''
+  refundForm.custom = ''
+  refundDialogVisible.value = true
+}
+
+async function submitRefund() {
+  if (!refundForm.category) { ElMessage.warning('请选择退款原因'); return }
+  if (refundForm.category === '其他原因' && !refundForm.custom.trim()) {
+    ElMessage.warning('请填写具体原因说明')
+    return
+  }
+  const reason = refundForm.category === '其他原因'
+    ? `其他原因：${refundForm.custom.trim()}`
+    : refundForm.category
+  refundSubmitting.value = true
   try {
-    const { value } = await ElMessageBox.prompt('请输入退款原因', '申请退款', {
-      confirmButtonText: '提交申请',
-      cancelButtonText: '取消',
-      inputPlaceholder: '例如：不想要了 / 与卖家协商一致',
-      inputValidator: v => !!v?.trim() || '请填写退款原因'
-    })
-    reason = value.trim()
-  } catch { return }
-  await applyRefund(id, reason)
-  ElMessage.success('退款申请已提交，等待卖家处理')
-  loadData()
+    await applyRefund(refundOrderId.value, reason)
+    ElMessage.success('退款申请已提交，等待卖家处理')
+    refundDialogVisible.value = false
+    loadData()
+  } finally { refundSubmitting.value = false }
 }
 
 async function handleRefundAction(id, agree) {
@@ -254,8 +323,6 @@ onBeforeUnmount(() => clearInterval(ticker))
 <style scoped>
 /* ====== 页面标题 ====== */
 .page-header { margin-bottom: 24px; }
-.page-title { font-size: 24px; font-weight: 800; color: #1F2937; margin: 0 0 4px; }
-.page-sub { font-size: 14px; color: #9CA3AF; margin: 0; }
 
 /* ====== 标签页 ====== */
 .order-tabs { margin-bottom: 20px; }
@@ -265,7 +332,7 @@ onBeforeUnmount(() => clearInterval(ticker))
   min-width: 20px; height: 20px; padding: 0 6px;
   border-radius: 10px;
   font-size: 11px; font-weight: 700;
-  background: #ECFDF5; color: #059669;
+  background: #EF4444; color: #fff;
 }
 
 /* ====== 订单卡片 ====== */
@@ -362,6 +429,12 @@ onBeforeUnmount(() => clearInterval(ticker))
 /* 分页 */
 .pagination { display: flex; justify-content: center; margin-top: 32px; }
 
+/* 退款弹窗 */
+.refund-dialog-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 16px; font-weight: 700; color: #1F2937;
+}
+
 /* ====== 响应式 ====== */
 @media (max-width: 768px) {
   .order-content { padding: 12px 14px 10px; }
@@ -370,7 +443,7 @@ onBeforeUnmount(() => clearInterval(ticker))
 }
 /* 手机端：按钮全宽 */
 @media (max-width: 480px) {
-  .page-title { font-size: 20px; }
+  
   .order-item { border-radius: 10px; }
   .order-actions { flex-direction: column; }
   .order-actions .el-button { width: 100%; }

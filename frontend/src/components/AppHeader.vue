@@ -14,8 +14,7 @@
     </div>
     <div class="header-inner page-container">
       <div class="logo" @click="router.push('/')">
-        <el-icon :size="28" color="#10B981"><Shop /></el-icon>
-        <span>校园二手</span>
+        <img src="/logo-horizontal.png" alt="校园物品" class="logo-img">
       </div>
 
       <div class="search-box">
@@ -51,17 +50,23 @@
           </template>
         </el-dropdown>
 
+        <!-- 聊天入口 -->
+        <span v-if="userStore.isLoggedIn" class="bell-wrap hide-mobile" title="消息" @click="router.push('/chat')">
+          <el-icon :size="22"><ChatLineSquare /></el-icon>
+          <span v-if="chatStore.unread > 0" class="bell-badge">{{ chatStore.unread > 99 ? '99+' : chatStore.unread }}</span>
+        </span>
+
         <!-- 通知铃铛 -->
         <el-popover
           v-if="userStore.isLoggedIn"
           trigger="click"
           :width="280"
           placement="bottom-end"
-          @show="userStore.isAdmin ? loadNotifications() : loadUserNotifications()"
+          @show="refreshNotifications"
           @hide="userStore.isAdmin ? dismissNotifications() : null"
         >
           <template #reference>
-            <span class="bell-wrap">
+            <span class="bell-wrap bell-notify">
               <el-icon :size="22"><Bell /></el-icon>
               <span v-if="badgeCount > 0" class="bell-badge">{{ badgeCount > 99 ? '99+' : badgeCount }}</span>
             </span>
@@ -81,9 +86,13 @@
               <span>小黑屋</span>
               <el-tag size="small" :type="notify.blacklistCount > 0 ? 'warning' : 'info'">{{ notify.blacklistCount }}</el-tag>
             </div>
+            <div class="notify-item" @click="dismissNotifications(); router.push('/admin'); goAdminTab('ordersArb')">
+              <span>新仲裁</span>
+              <el-tag size="small" :type="notify.pendingArbitrations > 0 ? 'danger' : 'info'">{{ notify.pendingArbitrations }}</el-tag>
+            </div>
           </div>
-          <!-- 普通用户内容 -->
-          <div v-else class="notify-list">
+          <!-- 个人消息（普通用户与管理员均可见，管理员同时是卖家/买家） -->
+          <div v-if="userStore.isLoggedIn" class="notify-list" :class="{ 'notify-list-second': userStore.isAdmin }">
             <div class="notify-title">消息通知</div>
             <div v-if="userNotifications.length === 0" style="text-align:center;color:#9CA3AF;padding:16px 0">暂无通知</div>
             <div
@@ -104,9 +113,20 @@
           </div>
         </el-popover>
 
-        <!-- 购物车入口（登录后可见） -->
+        <!-- 购物车入口（登录后可见，带数量角标） -->
         <span v-if="userStore.isLoggedIn" class="bell-wrap" @click="router.push('/cart')">
           <el-icon :size="22"><ShoppingCart /></el-icon>
+          <span v-if="cartCount > 0" class="bell-badge">{{ cartCount > 99 ? '99+' : cartCount }}</span>
+        </span>
+
+        <!-- 我的收藏入口（仅图标） -->
+        <span v-if="userStore.isLoggedIn" class="bell-wrap hide-mobile" title="我的收藏" @click="router.push('/profile?tab=favorites')">
+          <el-icon :size="22"><Star /></el-icon>
+        </span>
+
+        <!-- 收货地址入口（仅图标） -->
+        <span v-if="userStore.isLoggedIn" class="bell-wrap hide-mobile" title="收货地址" @click="router.push('/profile?tab=address')">
+          <el-icon :size="22"><Location /></el-icon>
         </span>
 
         <el-button v-if="userStore.isLoggedIn" type="primary" class="hide-tablet" @click="router.push('/publish')">
@@ -123,7 +143,10 @@
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item @click="router.push('/profile')">个人中心</el-dropdown-item>
-                <el-dropdown-item @click="router.push('/orders')">我的订单</el-dropdown-item>
+                <el-dropdown-item @click="router.push('/orders')">
+                  我的订单
+                  <span v-if="pendingOrderCount > 0" class="menu-badge">{{ pendingOrderCount > 99 ? '99+' : pendingOrderCount }}</span>
+                </el-dropdown-item>
                 <el-dropdown-item @click="router.push('/notifications')">
                   消息通知
                   <span v-if="userUnreadCount > 0" class="menu-badge">{{ userUnreadCount }}</span>
@@ -240,13 +263,24 @@
                   </div>
                   <div class="menu-item" @click="mobileMenuOpen = false; router.push('/orders')">
                     <el-icon :size="18"><Document /></el-icon>我的订单
+                    <span v-if="pendingOrderCount > 0" class="menu-badge">{{ pendingOrderCount > 99 ? '99+' : pendingOrderCount }}</span>
                   </div>
                   <div class="menu-item" @click="mobileMenuOpen = false; router.push('/cart')">
                     <el-icon :size="18"><ShoppingCart /></el-icon>购物车
                   </div>
+                  <div class="menu-item" @click="mobileMenuOpen = false; router.push('/profile?tab=favorites')">
+                    <el-icon :size="18"><Star /></el-icon>我的收藏
+                  </div>
+                  <div class="menu-item" @click="mobileMenuOpen = false; router.push('/profile?tab=address')">
+                    <el-icon :size="18"><Location /></el-icon>收货地址
+                  </div>
                   <div class="menu-item" @click="mobileMenuOpen = false; router.push('/notifications')">
                     <el-icon :size="18"><Bell /></el-icon>消息通知
                     <span v-if="userUnreadCount > 0" class="menu-badge">{{ userUnreadCount }}</span>
+                  </div>
+                  <div class="menu-item" @click="mobileMenuOpen = false; router.push('/chat')">
+                    <el-icon :size="18"><ChatLineSquare /></el-icon>聊天
+                    <span v-if="chatStore.unread > 0" class="menu-badge">{{ chatStore.unread }}</span>
                   </div>
                   <div v-if="userStore.isAdmin" class="menu-item" @click="mobileMenuOpen = false; router.push('/admin')">
                     <el-icon :size="18"><Setting /></el-icon>后台管理
@@ -273,18 +307,23 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { Search, ArrowDown, InfoFilled, ChatDotRound, QuestionFilled, Message, Clock, WarningFilled, EditPen, Bell, Menu, Close, HomeFilled, Goods, User, Document, Setting, SwitchButton, ShoppingCart } from '@element-plus/icons-vue'
+import { Search, ArrowDown, InfoFilled, ChatDotRound, ChatLineSquare, QuestionFilled, Message, Clock, WarningFilled, EditPen, Bell, Menu, Close, HomeFilled, Goods, User, Document, Setting, SwitchButton, ShoppingCart, Star, Location } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
+import { useChatStore } from '@/stores/chat'
 import { ElMessage } from 'element-plus'
 import { getUserBlacklistStatus } from '@/api/user'
 import { submitAppeal } from '@/api/appeal'
 import { getNotifications } from '@/api/admin'
 import { getNotificationList, getUnreadCount } from '@/api/notification'
+import { getOrderStatusCounts } from '@/api/order'
+import { getCartList } from '@/api/cart'
 
 const router = useRouter()
 const userStore = useUserStore()
+const chatStore = useChatStore()
+watch(() => userStore.isLoggedIn, (v) => v ? chatStore.connect() : chatStore.disconnect())
 const keyword = ref('')
 const showContact = ref(false)
 
@@ -299,24 +338,31 @@ const appealReason = ref('')
 const appealing = ref(false)
 
 // 管理员通知
-const notify = reactive({ pendingComplaints: 0, pendingAppeals: 0, blacklistCount: 0, total: 0 })
+const notify = reactive({ pendingComplaints: 0, pendingAppeals: 0, blacklistCount: 0, pendingArbitrations: 0, total: 0 })
 const notifyTotal = ref(0)
 let notifyTimer = null
 
 // 用户通知
 const userNotifications = ref([])
 const userUnreadCount = ref(0)
-const badgeCount = ref(0)
+// 铃铛角标 = 管理员待处理 + 个人未读消息
+const badgeCount = computed(() => notifyTotal.value + userUnreadCount.value)
+// 订单待办与购物车数量角标：随 60 秒轮询自动更新，订单完成后自动消失
+const pendingOrderCount = ref(0)
+const cartCount = ref(0)
 
 async function loadUserNotifications() {
   try {
-    const [listRes, countRes] = await Promise.all([
+    const [listRes, countRes, orderRes, cartRes] = await Promise.all([
       getNotificationList({ pageNum: 1, pageSize: 5 }),
-      getUnreadCount()
+      getUnreadCount(),
+      getOrderStatusCounts(),
+      getCartList()
     ])
     userNotifications.value = listRes.data.records || []
     userUnreadCount.value = countRes.data.count
-    badgeCount.value = userUnreadCount.value
+    pendingOrderCount.value = (orderRes.data?.BUYER_PENDING || 0) + (orderRes.data?.BUYER_SHIPPED || 0) + (orderRes.data?.SELLER_PAID || 0) + (orderRes.data?.SELLER_REFUND || 0)
+    cartCount.value = (cartRes.data || []).length
   } catch {}
 }
 
@@ -326,8 +372,13 @@ async function loadNotifications() {
     const res = await getNotifications()
     Object.assign(notify, res.data)
     notifyTotal.value = notify.total
-    badgeCount.value = notify.total
   } catch {}
+}
+
+// 管理员同时拉取后台待处理与个人消息，普通用户只拉个人消息
+function refreshNotifications() {
+  if (userStore.isAdmin) loadNotifications()
+  if (userStore.isLoggedIn) loadUserNotifications()
 }
 
 function goAdminTab(tab) {
@@ -341,7 +392,7 @@ function goNotifications() {
 
 function dismissNotifications() {
   notifyTotal.value = 0
-  Object.assign(notify, { pendingComplaints: 0, pendingAppeals: 0, blacklistCount: 0, total: 0 })
+  Object.assign(notify, { pendingComplaints: 0, pendingAppeals: 0, blacklistCount: 0, pendingArbitrations: 0, total: 0 })
 }
 
 function formatUntil(d) {
@@ -374,12 +425,9 @@ async function submitAppealHandler() {
 
 onMounted(() => {
   checkBlacklist()
-  if (userStore.isAdmin) loadNotifications()
-  else if (userStore.isLoggedIn) loadUserNotifications()
-  notifyTimer = setInterval(() => {
-    if (userStore.isAdmin) loadNotifications()
-    else if (userStore.isLoggedIn) loadUserNotifications()
-  }, 60000)
+  refreshNotifications()
+  notifyTimer = setInterval(refreshNotifications, 60000)
+  if (userStore.isLoggedIn) chatStore.connect()
 })
 
 onBeforeUnmount(() => clearInterval(notifyTimer))
@@ -389,6 +437,7 @@ function handleSearch() {
 }
 
 function handleLogout() {
+  chatStore.disconnect()
   userStore.logout()
   ElMessage.success('已退出登录')
   router.push('/')
@@ -415,12 +464,15 @@ function handleLogout() {
 .logo {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 20px;
-  font-weight: 700;
-  color: #10B981;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.logo-img {
+  height: 56px;
+  width: auto;
+  display: block;
+  mix-blend-mode: multiply;
 }
 
 .search-box {
@@ -517,6 +569,10 @@ function handleLogout() {
   transition: color 0.2s;
 }
 .bell-wrap:hover { color: #10B981; }
+/* 手机端顶栏空间有限，通知入口收进汉堡菜单/底部导航 */
+@media (max-width: 768px) {
+  .bell-notify { display: none; }
+}
 .bell-badge {
   position: absolute; top: -6px; right: -10px;
   min-width: 18px; height: 18px; line-height: 18px;
@@ -528,6 +584,10 @@ function handleLogout() {
 }
 
 .notify-list { display: flex; flex-direction: column; }
+.notify-list-second {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid #F3F4F6;
+}
 .notify-title {
   font-size: 14px; font-weight: 700; color: #1F2937;
   margin-bottom: 12px; padding-bottom: 8px;
@@ -597,7 +657,7 @@ function handleLogout() {
     padding-top: 8px;
     padding-bottom: 8px;
   }
-  .logo { font-size: 17px; gap: 5px; }
+  .logo-img { height: 46px; }
   .search-box {
     flex: 1 1 auto;
     min-width: 0;

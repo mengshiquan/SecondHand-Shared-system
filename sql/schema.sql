@@ -1,4 +1,4 @@
--- 校园二手物品共享平台数据库脚本
+-- 校园二手物品共享平台数据库脚本（完整版，含所有迭代字段）
 CREATE DATABASE IF NOT EXISTS secondhand_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE secondhand_db;
 
@@ -11,8 +11,12 @@ CREATE TABLE IF NOT EXISTS t_user (
     avatar      VARCHAR(255) DEFAULT NULL COMMENT '头像',
     phone       VARCHAR(20)  DEFAULT NULL COMMENT '手机号',
     email       VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
-    role        VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色 USER/ADMIN',
+    role        VARCHAR(20)  NOT NULL DEFAULT 'USER' COMMENT '角色 USER/ADMIN/SUPER_ADMIN',
     status      TINYINT      NOT NULL DEFAULT 1 COMMENT '状态 0-禁用 1-正常 2-已注销',
+    blacklist_status    VARCHAR(20)  DEFAULT NULL COMMENT '小黑屋状态 NULL=正常 AUTO=系统拉黑 MANUAL=管理员拉黑',
+    blacklist_reason    VARCHAR(255) DEFAULT NULL COMMENT '拉黑原因',
+    blacklist_until     DATETIME     DEFAULT NULL COMMENT '解封时间',
+    blacklist_count     INT          DEFAULT 0    COMMENT '历史拉黑次数',
     create_time DATETIME     DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     student_id    VARCHAR(20)  DEFAULT NULL COMMENT '学号',
@@ -61,15 +65,21 @@ CREATE TABLE IF NOT EXISTS t_order (
     buyer_id    BIGINT         NOT NULL COMMENT '买家ID',
     seller_id   BIGINT         NOT NULL COMMENT '卖家ID',
     price       DECIMAL(10,2)  NOT NULL COMMENT '成交价格',
-    status      VARCHAR(20)    NOT NULL DEFAULT 'PENDING' COMMENT '订单状态',
+    buyer_name    VARCHAR(50)  DEFAULT NULL COMMENT '收货人姓名',
+    buyer_phone   VARCHAR(20)  DEFAULT NULL COMMENT '联系电话',
+    buyer_address VARCHAR(255) DEFAULT NULL COMMENT '收货地址',
+    expire_time   DATETIME     DEFAULT NULL COMMENT '订单过期时间（待付款30分钟后）',
+    status      VARCHAR(20)    NOT NULL DEFAULT 'PENDING' COMMENT '订单状态 PENDING/PAID/SHIPPED/COMPLETED/CANCELLED',
     remark      VARCHAR(255)   DEFAULT NULL COMMENT '备注',
-    create_time DATETIME       DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     address_id    BIGINT       DEFAULT NULL COMMENT '收货地址ID',
     refund_status VARCHAR(20)  DEFAULT NULL COMMENT '退款状态',
     refund_reason VARCHAR(255) DEFAULT NULL COMMENT '退款原因',
     refund_time   DATETIME     DEFAULT NULL COMMENT '退款申请时间',
-    payment_time  DATETIME     DEFAULT NULL COMMENT '付款时间（预留模拟支付）',
+    payment_time  DATETIME     DEFAULT NULL COMMENT '付款时间',
+    pay_channel   VARCHAR(20)  DEFAULT NULL COMMENT '支付渠道 ALIPAY/WECHAT',
+    pay_trade_no  VARCHAR(64)  DEFAULT NULL COMMENT '第三方支付交易号',
+    create_time DATETIME       DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    update_time DATETIME       DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted     TINYINT        NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     INDEX idx_buyer (buyer_id),
     INDEX idx_seller (seller_id)
@@ -100,12 +110,9 @@ CREATE TABLE IF NOT EXISTS t_comment (
 -- 初始化数据
 -- 密码使用 MD5 初始化，应用启动时 PasswordMigration 会自动迁移为 BCrypt
 -- admin/admin, student/123456
-INSERT INTO t_user (username, password, nickname, role, status) VALUES
-('admin', '21232f297a57a5a743894a0e4a801fc3', '管理员', 'SUPER_ADMIN', 1),
-('student', 'e10adc3949ba59abbe56e057f20f883e', '校园同学', 'USER', 1);
-
--- 存量用户默认已认证
-UPDATE t_user SET verify_status = 'APPROVED' WHERE verify_status IS NULL;
+INSERT INTO t_user (username, password, nickname, role, status, verify_status) VALUES
+('admin', '21232f297a57a5a743894a0e4a801fc3', '管理员', 'SUPER_ADMIN', 1, 'APPROVED'),
+('student', 'e10adc3949ba59abbe56e057f20f883e', '校园同学', 'USER', 1, 'APPROVED');
 
 -- 一级分类
 INSERT INTO t_category (id, name, icon, sort) VALUES
@@ -197,3 +204,63 @@ CREATE TABLE IF NOT EXISTS t_cart (
     deleted     TINYINT  NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     UNIQUE KEY uk_user_product (user_id, product_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='购物车表';
+
+-- 投诉表
+CREATE TABLE IF NOT EXISTS t_complaint (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '投诉ID',
+    target_user_id  BIGINT NOT NULL COMMENT '被投诉用户ID',
+    reporter_id     BIGINT NOT NULL COMMENT '投诉人ID',
+    reason          VARCHAR(50) NOT NULL COMMENT '投诉原因',
+    description     TEXT COMMENT '详细描述',
+    evidence        TEXT COMMENT '证据图片URL（逗号分隔）',
+    status          VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/RESOLVED/DISMISSED',
+    handler_id      BIGINT DEFAULT NULL COMMENT '处理人ID',
+    handler_note    VARCHAR(255) DEFAULT NULL COMMENT '处理备注',
+    create_time     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted         TINYINT NOT NULL DEFAULT 0,
+    INDEX idx_target (target_user_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户投诉表';
+
+-- 申诉表
+CREATE TABLE IF NOT EXISTS t_appeal (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '申诉ID',
+    user_id         BIGINT NOT NULL COMMENT '申诉人ID',
+    reason          TEXT NOT NULL COMMENT '申诉理由',
+    status          VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/APPROVED/REJECTED',
+    handler_id      BIGINT DEFAULT NULL COMMENT '处理人ID',
+    handler_note    VARCHAR(255) DEFAULT NULL COMMENT '处理备注',
+    create_time     DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted         TINYINT NOT NULL DEFAULT 0,
+    INDEX idx_user (user_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户申诉表';
+
+-- 用户通知表
+CREATE TABLE IF NOT EXISTS t_notification (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '通知ID',
+    user_id     BIGINT NOT NULL COMMENT '接收用户ID',
+    title       VARCHAR(100) NOT NULL COMMENT '通知标题',
+    content     VARCHAR(500) NOT NULL COMMENT '通知内容',
+    type        VARCHAR(30) NOT NULL COMMENT '类型',
+    is_read     TINYINT NOT NULL DEFAULT 0 COMMENT '0=未读 1=已读',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted     TINYINT NOT NULL DEFAULT 0,
+    INDEX idx_user_read (user_id, is_read),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户通知表';
+
+-- 买卖家聊天消息表
+CREATE TABLE IF NOT EXISTS t_chat_message (
+    id          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    sender_id   BIGINT       NOT NULL COMMENT '发送者用户ID',
+    receiver_id BIGINT       NOT NULL COMMENT '接收者用户ID',
+    product_id  BIGINT       DEFAULT NULL COMMENT '关联商品ID',
+    content     VARCHAR(500) NOT NULL COMMENT '消息内容',
+    is_read     TINYINT      NOT NULL DEFAULT 0 COMMENT '0-未读 1-已读',
+    create_time DATETIME     DEFAULT CURRENT_TIMESTAMP,
+    deleted     TINYINT      DEFAULT 0,
+    KEY idx_sender (sender_id),
+    KEY idx_receiver (receiver_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='买卖家聊天消息表';

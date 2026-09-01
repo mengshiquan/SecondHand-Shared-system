@@ -1,9 +1,10 @@
 <template>
   <div class="login-page">
+    <AuthBackground />
     <div class="left-section">
       <div class="logo-section">
         <a href="/" class="logo-link">
-          <span>校园二手共享平台</span>
+          <img src="/logo-vertical.png" alt="校园物品" class="logo-vertical-img">
         </a>
       </div>
 
@@ -13,23 +14,19 @@
       </div>
 
       <div class="footer-links">
-        <a href="/privacy-policy" class="footer-link">Privacy Policy</a>
-        <a href="/terms" class="footer-link">Terms of Service</a>
+        <a href="https://www.asu.edu.cn/" target="_blank" rel="noopener" class="footer-link">安顺学院</a>
+        <a href="/" class="footer-link">校园二手平台</a>
       </div>
-
-      <div class="grid-overlay"></div>
-      <div class="blur-circle blur-circle-1"></div>
-      <div class="blur-circle blur-circle-2"></div>
     </div>
 
     <div class="right-section">
       <div class="form-wrapper">
         <div class="mobile-logo">
-          <span>校园二手共享平台</span>
+          <img src="/logo-horizontal.png" alt="校园物品" class="mobile-logo-img">
         </div>
 
         <div class="auth-header">
-          <el-icon :size="40" color="#10B981"><Shop /></el-icon>
+          <img src="/logo-horizontal.png" alt="校园物品" class="auth-logo">
           <h2>注册新账号</h2>
           <p>加入校园二手共享社区</p>
         </div>
@@ -56,6 +53,12 @@
           <el-form-item prop="schoolName">
             <el-input v-model="form.schoolName" placeholder="学校名称" prefix-icon="School" size="large" maxlength="100" @focus="isTyping = true" @blur="isTyping = false" />
           </el-form-item>
+          <el-form-item prop="captchaCode">
+            <div class="captcha-row">
+              <el-input v-model="form.captchaCode" placeholder="验证码" prefix-icon="Key" size="large" maxlength="4" />
+              <img :src="captchaImg" class="captcha-img" title="点击刷新验证码" @click="refreshCaptcha">
+            </div>
+          </el-form-item>
           
           <el-form-item>
             <el-button type="primary" size="large" style="width: 100%" :loading="loading" @click="handleRegister">
@@ -73,19 +76,23 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { register } from '@/api/user'
+import { register, getCaptcha } from '@/api/user'
 import { ElMessage } from 'element-plus'
 import AnimatedCharacters from '@/components/AnimatedCharacters.vue'
+import AuthBackground from '@/components/AuthBackground.vue'
 
+/**
+ * 注册页：收集用户名、昵称、密码、手机号、学号、学校及验证码完成注册
+ */
 const router = useRouter()
-const formRef = ref()
-const loading = ref(false)
-const showPassword = ref(false)
-const isTyping = ref(false)
-const registerFailed = ref(false)
-const registerSuccess = ref(false)
+const formRef = ref()                // 表单引用
+const loading = ref(false)           // 注册提交中
+const showPassword = ref(false)      // 密码是否明文展示（控制动画）
+const isTyping = ref(false)          // 是否正在输入（控制动画）
+const registerFailed = ref(false)    // 注册失败动画触发
+const registerSuccess = ref(false)   // 注册成功动画触发
 
 const form = reactive({
   username: '',
@@ -94,9 +101,17 @@ const form = reactive({
   confirmPassword: '',
   phone: '',
   studentId: '',
-  schoolName: ''
+  schoolName: '',
+  captchaKey: '',
+  captchaCode: ''
 })
 
+/**
+ * 校验两次输入的密码是否一致
+ * @param {*} rule 校验规则
+ * @param {string} value 确认密码值
+ * @param {Function} callback 校验回调
+ */
 const validateConfirm = (rule, value, callback) => {
   if (value !== form.password) callback(new Error('两次密码不一致'))
   else callback()
@@ -118,9 +133,27 @@ const rules = {
   ],
   phone: [{ required: true, message: '请输入手机号', trigger: 'blur' }, { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }],
   studentId: [{ required: true, message: '请输入学号', trigger: 'blur' }],
-  schoolName: [{ required: true, message: '请输入学校名称', trigger: 'blur' }]
+  schoolName: [{ required: true, message: '请输入学校名称', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 }
 
+const captchaImg = ref('')
+/**
+ * 刷新图形验证码并清空已输入的验证码
+ */
+async function refreshCaptcha() {
+  try {
+    const res = await getCaptcha()
+    captchaImg.value = res.data.image
+    form.captchaKey = res.data.key
+    form.captchaCode = ''
+  } catch { /* 验证码加载失败时提交会提示 */ }
+}
+onMounted(refreshCaptcha)
+
+/**
+ * 注册提交：校验表单 → 调用注册接口 → 成功延迟跳转登录页，失败刷新验证码
+ */
 async function handleRegister() {
   await formRef.value.validate()
   loading.value = true
@@ -133,15 +166,18 @@ async function handleRegister() {
       password: form.password,
       phone: form.phone,
       studentId: form.studentId,
-      schoolName: form.schoolName
+      schoolName: form.schoolName,
+      captchaKey: form.captchaKey,
+      captchaCode: form.captchaCode
     })
     registerSuccess.value = true
-    ElMessage.success('注册成功，请登录')
+    ElMessage.success('注册成功，校园身份审核通过后即可发布与交易')
     setTimeout(() => {
       router.push('/login')
-    }, 1000)
+    }, 1800)
   } catch (error) {
     registerFailed.value = true
+    refreshCaptcha()
     setTimeout(() => {
       registerFailed.value = false
     }, 3000)
@@ -165,14 +201,12 @@ async function handleRegister() {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: linear-gradient(160deg, #064E3B 0%, #047857 30%, #059669 60%, #10B981 100%);
   padding: 3rem;
-  color: white;
+  color: var(--sh-ink);
 }
 
 .logo-section {
   position: relative;
-  z-index: 20;
 }
 
 .logo-link {
@@ -183,6 +217,12 @@ async function handleRegister() {
   font-weight: 600;
   text-decoration: none;
   color: inherit;
+}
+
+.logo-vertical-img {
+  height: 168px;
+  width: auto;
+  display: block;
 }
 
 .characters-section {
@@ -197,43 +237,20 @@ async function handleRegister() {
 .footer-links {
   position: relative; z-index: 20;
   display: flex; align-items: center; gap: 2rem;
-  font-size: 0.875rem; color: rgba(255,255,255,0.6);
+  font-size: 0.875rem; color: var(--sh-muted);
 }
 .footer-link { color: inherit; text-decoration: none; transition: color 0.2s; }
-.footer-link:hover { color: #fff; }
-
-.grid-overlay {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.blur-circle {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(96px);
-}
-
-.blur-circle-1 {
-  top: 20%; right: 20%;
-  width: 18rem; height: 18rem;
-  background: rgba(16, 185, 129, 0.15);
-}
-.blur-circle-2 {
-  bottom: 20%; left: 20%;
-  width: 26rem; height: 26rem;
-  background: rgba(5, 150, 105, 0.12);
-}
+.footer-link:hover { color: var(--sh-primary-deep); }
 
 .right-section {
+  position: relative;
   display: flex; align-items: center; justify-content: center;
   padding: 2rem;
-  background: linear-gradient(to bottom, #ffffff, #F0FDF4);
 }
 
 .form-wrapper {
+  position: relative;
+  z-index: 1;
   width: 100%; max-width: 400px;
   padding: 36px 32px;
   background: #fff;
@@ -248,7 +265,36 @@ async function handleRegister() {
   gap: 0.5rem;
   font-size: 1.125rem;
   font-weight: 600;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
+}
+
+.mobile-logo-img {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+
+.auth-logo {
+  height: 46px;
+  width: auto;
+  margin: 0 auto 6px;
+  display: block;
+}
+
+/* ---- 验证码 ---- */
+.captcha-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.captcha-img {
+  height: 40px;
+  flex: none;
+  border-radius: 8px;
+  border: 1px solid var(--sh-line);
+  cursor: pointer;
+  background: #fff;
 }
 
 .auth-header {
@@ -256,7 +302,19 @@ async function handleRegister() {
 }
 .auth-header h2 {
   margin: 10px 0 6px;
-  font-size: 24px; font-weight: 700; color: #1F2937;
+  font-size: 24px; font-weight: 700; color: var(--sh-ink);
+  position: relative;
+  display: inline-block;
+}
+/* 三色马克笔下划线：绿/橙/靖蓝，呼应背景涂鸦笔色 */
+.auth-header h2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -8px;
+  width: 56px; height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--sh-primary) 0 34%, var(--sh-accent) 34% 67%, #6366F1 67% 100%);
 }
 
 .auth-header p {

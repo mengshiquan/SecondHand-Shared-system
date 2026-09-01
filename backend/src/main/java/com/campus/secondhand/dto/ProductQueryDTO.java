@@ -23,6 +23,9 @@ public class ProductQueryDTO {
     /** 发布者ID（我的发布） */
     private Long sellerId;
 
+    /** 排序方式：price_asc / price_desc / view_desc，默认综合（最新） */
+    private String sortBy;
+
     private Integer pageNum = 1;
 
     private Integer pageSize = 10;

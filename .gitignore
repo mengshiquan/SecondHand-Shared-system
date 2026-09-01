@@ -1,5 +1,6 @@
 # 项目排除路径
 /backend/target/
+/backend/application-prod.yml
 /frontend/dist/
 /frontend/node_modules/
 /frontend/node_modules/@babel/parser/
@@ -316,3 +317,6 @@
 /frontend/node_modules/zrender/lib/tool/path.js
 /frontend/node_modules/zrender/lib/tool/transformPath.js
 /frontend/node_modules/zrender/lib/zrender.js
+
+# E2E 测试截图产物
+/frontend/test-screenshots/

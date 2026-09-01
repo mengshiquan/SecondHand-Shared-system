@@ -1,5 +1,16 @@
 // End-to-end test: 用户 + 管理员 全流程测试
 import { chromium } from 'playwright';
+import { execSync } from 'node:child_process';
+
+// 验证码存于 Redis，本地测试直接读取当前验证码填入
+function readCaptchaCode() {
+  try {
+    const keys = execSync('D:\\tool\\Redis\\redis-cli.exe --scan --pattern "captcha:*"')
+      .toString().trim().split(/\r?\n/).filter(Boolean);
+    if (!keys.length) return '';
+    return execSync(`D:\\tool\\Redis\\redis-cli.exe GET "${keys[keys.length - 1]}"`).toString().trim();
+  } catch { return ''; }
+}
 
 const BASE = 'http://localhost:5173';
 const OUT = 'd:/code/SecondHand-Shared-system/frontend/test-screenshots';
@@ -76,6 +87,8 @@ async function run() {
   await page.waitForTimeout(800);
   await page.locator('input[type="text"]').first().fill('student');
   await page.locator('input[type="password"]').fill('123456');
+  await page.waitForTimeout(600);
+  await page.locator('input[placeholder="验证码"]').fill(readCaptchaCode());
   await page.screenshot({ path: `${OUT}/06-login-filled.png` });
   await page.locator('button[type="button"]').first().click();
   await page.waitForTimeout(2000);
@@ -230,6 +243,8 @@ async function run() {
   await page.waitForTimeout(800);
   await page.locator('input[type="text"]').first().fill('admin');
   await page.locator('input[type="password"]').fill('admin');
+  await page.waitForTimeout(600);
+  await page.locator('input[placeholder="验证码"]').fill(readCaptchaCode());
   await page.locator('button[type="button"]').first().click();
   await page.waitForTimeout(2000);
 

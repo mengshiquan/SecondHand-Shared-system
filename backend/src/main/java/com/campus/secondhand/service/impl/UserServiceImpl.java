@@ -16,6 +16,7 @@ import com.campus.secondhand.util.UserContext;
 import com.campus.secondhand.vo.LoginVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -34,8 +35,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Autowired
     private OrderMapper orderMapper;
 
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    /**
+     * 校验图形验证码：一次性消费，错误/过期均要求重新刷新
+     */
+    private void verifyCaptcha(String captchaKey, String captchaCode) {
+        String redisKey = "captcha:" + captchaKey;
+        String stored = stringRedisTemplate.opsForValue().get(redisKey);
+        stringRedisTemplate.delete(redisKey);
+        if (stored == null) {
+            throw new BusinessException("验证码已过期，请刷新后重试");
+        }
+        if (!stored.equalsIgnoreCase(captchaCode)) {
+            throw new BusinessException("验证码错误");
+        }
+    }
+
+    /**
+     * 用户登录：先校验图形验证码，再验证用户名密码，最后校验账号状态。
+     * 密码支持 BCrypt 新格式与 MD5 旧格式兼容，并在匹配成功后自动升级为 BCrypt。
+     *
+     * @param dto 登录请求（用户名、密码、验证码 key/值）
+     * @return 登录成功后的 token 及用户信息
+     */
     @Override
     public LoginVO login(LoginDTO dto) {
+        verifyCaptcha(dto.getCaptchaKey(), dto.getCaptchaCode());
         User user = getOne(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, dto.getUsername()));
         if (user == null) {
@@ -53,12 +80,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return buildLoginVO(user);
     }
 
+    /**
+     * 用户注册：校验图形验证码、用户名与学号唯一性（含已注销账号残留行），
+     * 密码使用 BCrypt 加密，注册后需管理员审核校园身份（verifyStatus=PENDING）。
+     *
+     * @param dto 注册请求（用户名、密码、学号、昵称等）
+     */
     @Override
     public void register(RegisterDTO dto) {
-        long count = count(new LambdaQueryWrapper<User>()
-                .eq(User::getUsername, dto.getUsername()));
+        verifyCaptcha(dto.getCaptchaKey(), dto.getCaptchaCode());
+        // 唯一性校验需覆盖已注销账号（逻辑删除残留行仍占用唯一值）
+        long count = baseMapper.countByUsernameIncludeDeleted(dto.getUsername());
         if (count > 0) {
             throw new BusinessException("用户名已存在");
+        }
+        // 学号唯一：一个学号只能注册一个账号，防止冒用身份
+        long studentCount = baseMapper.countByStudentIdIncludeDeleted(dto.getStudentId());
+        if (studentCount > 0) {
+            throw new BusinessException("该学号已被注册");
         }
 
         User user = new User();
@@ -66,7 +105,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setRole("USER");
         user.setStatus(1);
-        user.setVerifyStatus("APPROVED");
+        // 注册后需管理员审核校园身份，防止校外人员冒充学生发布虚假信息
+        user.setVerifyStatus("PENDING");
         save(user);
     }
 

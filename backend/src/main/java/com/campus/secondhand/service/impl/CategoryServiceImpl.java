@@ -22,7 +22,11 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
 
     @Override
     public List<Category> listAll() {
-        return list(new LambdaQueryWrapper<Category>().orderByAsc(Category::getSort));
+        // 先按父分类聚合（一级分类在前），再按排序值、ID 稳定排序，避免后台分类列表乱序
+        return list(new LambdaQueryWrapper<Category>()
+                .orderByAsc(Category::getParentId)
+                .orderByAsc(Category::getSort)
+                .orderByAsc(Category::getId));
     }
 
     @Override

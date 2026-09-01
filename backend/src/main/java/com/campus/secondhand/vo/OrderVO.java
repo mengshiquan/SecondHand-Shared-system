@@ -25,6 +25,7 @@ public class OrderVO {
     private String sellerName;
     private BigDecimal price;
     private String status;
+    private String payChannel;
     private String remark;
     private String refundStatus;
     private String refundReason;

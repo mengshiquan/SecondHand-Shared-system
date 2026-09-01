@@ -1,39 +1,9 @@
 <template>
   <div class="profile page-container">
     <el-row :gutter="20">
-      <!-- 左侧栏 -->
-      <el-col :xs="24" :sm="8" :md="7" :lg="6">
+      <!-- 左侧菜单 -->
+      <el-col :xs="24" :sm="8" :md="7" :lg="5">
         <div class="side-card">
-          <div class="side-header">
-            <svg class="header-decor" viewBox="0 0 200 80" preserveAspectRatio="none">
-              <circle cx="100" cy="120" r="90" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
-              <circle cx="100" cy="120" r="70" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1" />
-              <circle cx="100" cy="120" r="50" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" />
-            </svg>
-            <div class="avatar-upload" @click="triggerUpload" :class="{ uploading }">
-              <el-avatar :size="76" :src="avatarUrl">{{ userInfo?.nickname?.[0] }}</el-avatar>
-              <div class="avatar-mask"><el-icon :size="22"><Camera /></el-icon></div>
-            </div>
-            <input ref="fileInput" type="file" accept="image/*" hidden @change="handleAvatarChange" />
-            <h3>{{ userInfo?.nickname }}</h3>
-            <p class="side-role">
-              <el-tag :type="userInfo?.role === 'ADMIN' ? 'danger' : ''" size="small" effect="plain">
-                {{ userInfo?.role === 'ADMIN' ? '管理员' : '同学' }}
-              </el-tag>
-            </p>
-          </div>
-
-          <div class="side-stats">
-            <div class="stat-row">
-              <el-icon :size="18"><Goods /></el-icon>
-              <span>已发布 <strong>{{ myTotal }}</strong> 件</span>
-            </div>
-            <div class="stat-row">
-              <el-icon :size="18"><Star /></el-icon>
-              <span>已收藏 <strong>{{ favorites.length }}</strong> 件</span>
-            </div>
-          </div>
-
           <div class="side-nav">
             <div
               v-for="item in navItems"
@@ -50,7 +20,86 @@
       </el-col>
 
       <!-- 右侧内容区 -->
-      <el-col :xs="24" :sm="16" :md="17" :lg="18">
+      <el-col :xs="24" :sm="16" :md="17" :lg="19">
+        <!-- 个人首页概览 -->
+        <template v-if="activeTab === 'home'">
+          <div class="banner-card">
+            <div class="banner-left">
+              <div class="avatar-upload" :class="{ uploading }" @click="triggerUpload">
+                <el-avatar :size="84" :src="avatarUrl">{{ userInfo?.nickname?.[0] }}</el-avatar>
+                <div class="avatar-mask"><el-icon :size="22"><Camera /></el-icon></div>
+              </div>
+              <input ref="fileInput" type="file" accept="image/*" hidden @change="handleAvatarChange" />
+              <div class="banner-id">
+                <h2>{{ userInfo?.nickname }}</h2>
+                <p class="banner-sub">
+                  {{ userInfo?.username }}
+                  <template v-if="userInfo?.studentId"> · 学号 {{ userInfo?.studentId }}</template>
+                  <template v-if="userInfo?.schoolName"> · {{ userInfo?.schoolName }}</template>
+                </p>
+                <div class="banner-tags">
+                  <el-tag v-if="userInfo?.verifyStatus === 'APPROVED'" type="success" size="small" effect="plain">校园已认证</el-tag>
+                  <el-tag v-else-if="userInfo?.verifyStatus === 'PENDING'" type="warning" size="small" effect="plain">认证审核中</el-tag>
+                  <el-tag v-else-if="userInfo?.verifyStatus === 'REJECTED'" type="danger" size="small" effect="plain">认证未通过</el-tag>
+                  <el-tag
+                    :type="userInfo?.role === 'SUPER_ADMIN' ? 'danger' : userInfo?.role === 'ADMIN' ? 'warning' : ''"
+                    size="small" effect="plain"
+                  >
+                    {{ userInfo?.role === 'SUPER_ADMIN' ? '超级管理员' : userInfo?.role === 'ADMIN' ? '管理员' : '同学' }}
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+            <div class="banner-stats">
+              <div class="bstat"><b>{{ myTotal }}</b><span>发布</span></div>
+              <div class="bstat"><b>{{ favTotal }}</b><span>收藏</span></div>
+              <div class="bstat"><b>{{ orderTotal }}</b><span>订单</span></div>
+            </div>
+          </div>
+
+          <!-- 我的订单：整宽横排卡片 -->
+          <div class="dash-card dash-orders">
+            <div class="dash-head" @click="router.push('/orders')">我的订单<el-icon><ArrowRight /></el-icon></div>
+            <div class="order-counts">
+              <div v-for="s in orderStats" :key="s.key" class="oc" @click="router.push('/orders')">
+                <b>{{ s.count }}</b><span>{{ s.label }}</span>
+              </div>
+            </div>
+            <p class="orders-hint">当前暂无物流信息更新</p>
+            <div class="dash-foot" @click="router.push('/orders')">查看全部订单<el-icon><ArrowRight /></el-icon></div>
+          </div>
+
+          <!-- 下方三卡：收藏/发布/购物车 -->
+          <div class="dash-grid">
+            <div class="dash-card">
+              <div class="dash-head" @click="activeTab = 'favorites'">我的收藏<el-icon><ArrowRight /></el-icon></div>
+              <div v-if="favorites[0]" class="preview" @click="router.push(`/product/${favorites[0].id}`)">
+                <el-image :src="favorites[0].images?.[0]" fit="cover" class="preview-img" />
+                <p class="preview-title">{{ favorites[0].title }}</p>
+                <p class="preview-price">¥{{ favorites[0].price }}</p>
+              </div>
+              <div v-else class="preview-empty">还没有收藏</div>
+            </div>
+            <div class="dash-card">
+              <div class="dash-head" @click="activeTab = 'products'">我的发布<el-icon><ArrowRight /></el-icon></div>
+              <div v-if="myProducts[0]" class="preview" @click="router.push(`/product/${myProducts[0].id}`)">
+                <el-image :src="myProducts[0].images?.[0]" fit="cover" class="preview-img" />
+                <p class="preview-title">{{ myProducts[0].title }}</p>
+                <p class="preview-price">¥{{ myProducts[0].price }}</p>
+              </div>
+              <div v-else class="preview-empty">还没有发布</div>
+            </div>
+            <div class="dash-card">
+              <div class="dash-head" @click="router.push('/cart')">购物车<el-icon><ArrowRight /></el-icon></div>
+              <div v-if="cartPreview" class="preview" @click="router.push('/cart')">
+                <el-image :src="cartPreview.images?.[0]" fit="cover" class="preview-img" />
+                <p class="preview-title">{{ cartPreview.title }}</p>
+                <p class="preview-price">¥{{ cartPreview.price }}</p>
+              </div>
+              <div v-else class="preview-empty">购物车是空的</div>
+            </div>
+          </div>
+        </template>
         <!-- 个人资料 -->
         <div v-if="activeTab === 'info'" class="content-card">
           <h2 class="content-title">
@@ -181,12 +230,15 @@
             修改密码
           </h2>
           <p class="content-desc">请妥善保管你的密码，不要与他人共享</p>
-          <el-form :model="pwdForm" label-width="80px" class="profile-form">
+          <el-form :model="pwdForm" label-width="90px" class="profile-form">
             <el-form-item label="原密码">
               <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
             </el-form-item>
             <el-form-item label="新密码">
               <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="请输入新密码（6-20位）" />
+            </el-form-item>
+            <el-form-item label="确认新密码">
+              <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" @click="changePassword">确认修改</el-button>
@@ -257,8 +309,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Hide, Delete, Plus, Search } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
@@ -266,27 +318,57 @@ import { updateProfile, updatePassword, deactivateAccount } from '@/api/user'
 import { getMyProducts, deleteProduct, offShelfProduct } from '@/api/product'
 import { getFavoriteList, removeFavoriteBatch } from '@/api/favorite'
 import { getAddressList, addAddress, updateAddress, deleteAddress, setDefaultAddress } from '@/api/address'
+import { getOrderStatusCounts } from '@/api/order'
+import { getCartList } from '@/api/cart'
 import { uploadFile } from '@/api/file'
 import ProductCard from '@/components/ProductCard.vue'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
-const activeTab = ref('info')
+// 支持顶栏图标入口通过 /profile?tab=xxx 直接定位到对应页签
+const TAB_KEYS = ['home', 'info', 'products', 'favorites', 'address']
+const activeTab = ref(TAB_KEYS.includes(route.query.tab) ? route.query.tab : 'home')
+watch(() => route.query.tab, t => {
+  if (TAB_KEYS.includes(t)) activeTab.value = t
+})
 const userInfo = ref(null)
 const myProducts = ref([])
 const favorites = ref([])
 const myTotal = ref(0)
+const favTotal = ref(0)
 const myPage = ref(1)
 const uploading = ref(false)
 const fileInput = ref(null)
 
+// 首页概览：订单状态计数与购物车预览
+const orderCounts = ref({})
+const cartPreview = ref(null)
+const orderTotal = computed(() => orderCounts.value.TOTAL || 0)
+const orderStats = computed(() => [
+  { key: 'PENDING', label: '待付款', count: orderCounts.value.PENDING || 0 },
+  { key: 'PAID', label: '待发货', count: orderCounts.value.PAID || 0 },
+  { key: 'SHIPPED', label: '待收货', count: orderCounts.value.SHIPPED || 0 },
+  { key: 'COMPLETED', label: '已完成', count: orderCounts.value.COMPLETED || 0 },
+  { key: 'REFUND', label: '退款/售后', count: orderCounts.value.REFUND || 0 }
+])
+
+async function loadOverview() {
+  try {
+    const [oc, cc] = await Promise.all([getOrderStatusCounts(), getCartList()])
+    orderCounts.value = oc.data || {}
+    cartPreview.value = (cc.data || []).filter(i => !i.invalid)[0] || null
+  } catch { /* 概览加载失败不影响主流程 */ }
+}
+
 const navItems = [
+  { key: 'home', label: '个人首页', icon: 'HomeFilled' },
   { key: 'info', label: '个人资料', icon: 'User' },
   { key: 'products', label: '我的发布', icon: 'Goods' },
   { key: 'favorites', label: '我的收藏', icon: 'Star' },
   { key: 'address', label: '收货地址', icon: 'Location' },
   { key: 'password', label: '修改密码', icon: 'Lock' },
-  { key: 'danger', label: '危险操作', icon: 'Warning' }
+  { key: 'danger', label: '注销账号', icon: 'Warning' }
 ]
 
 const avatarUrl = computed(() => userInfo.value?.avatar || '')
@@ -308,7 +390,7 @@ async function handleAvatarChange(e) {
 }
 
 const profileForm = reactive({ nickname: '', phone: '', email: '' })
-const pwdForm = reactive({ oldPassword: '', newPassword: '' })
+const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 
 async function loadData() {
   userInfo.value = await userStore.fetchUserInfo()
@@ -316,6 +398,7 @@ async function loadData() {
   await loadFavorites()
   await loadMyProducts()
   loadAddresses()
+  loadOverview()
 }
 
 // ====== 收藏搜索 + 批量取消 ======
@@ -325,6 +408,7 @@ const favSelected = ref([])
 async function loadFavorites() {
   const favRes = await getFavoriteList({ pageNum: 1, pageSize: 20, keyword: favoriteKeyword.value || undefined })
   favorites.value = favRes.data.records
+  favTotal.value = favRes.data.total || favRes.data.records.length
   favSelected.value = favSelected.value.filter(id => favorites.value.some(p => p.id === id))
 }
 
@@ -409,11 +493,23 @@ async function saveProfile() {
 }
 
 async function changePassword() {
-  if (!pwdForm.oldPassword || !pwdForm.newPassword) { ElMessage.warning('请填写完整'); return }
-  await updatePassword(pwdForm)
+  if (!pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmPassword) {
+    ElMessage.warning('请填写完整')
+    return
+  }
+  if (pwdForm.newPassword !== pwdForm.confirmPassword) {
+    ElMessage.error('两次输入的新密码不一致')
+    return
+  }
+  if (pwdForm.newPassword.length < 6 || pwdForm.newPassword.length > 20) {
+    ElMessage.warning('新密码长度需为6-20位')
+    return
+  }
+  await updatePassword({ oldPassword: pwdForm.oldPassword, newPassword: pwdForm.newPassword })
   ElMessage.success('密码修改成功')
   pwdForm.oldPassword = ''
   pwdForm.newPassword = ''
+  pwdForm.confirmPassword = ''
 }
 
 async function handleOffShelf(id) {
@@ -464,21 +560,63 @@ onMounted(loadData)
   position: sticky; top: 84px;
 }
 
-.side-header {
-  background: linear-gradient(165deg, #059669 0%, #10B981 40%, #34D399 100%);
-  padding: 32px 16px 24px;
-  text-align: center;
-  color: #fff;
-  position: relative;
-  overflow: hidden;
+/* ====== 个人首页横幅 ====== */
+.banner-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  background: linear-gradient(120deg, #ECFDF5, #F0FDF4 55%, #FFF7ED);
+  border: 1px solid #E7F6EF;
+  border-radius: 16px; padding: 24px 28px; margin-bottom: 16px;
 }
-.side-header::after {
-  content: ''; position: absolute; inset: 0;
-  background: radial-gradient(circle at 30% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
+.banner-left { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.banner-id h2 { margin: 0 0 6px; font-size: 20px; font-weight: 800; color: #1F2937; }
+.banner-sub { margin: 0 0 8px; font-size: 13px; color: #6B7280; }
+.banner-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.banner-stats { display: flex; gap: 28px; flex-shrink: 0; }
+.bstat { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.bstat b { font-size: 22px; font-weight: 800; color: #10B981; font-variant-numeric: tabular-nums; }
+.bstat span { font-size: 12px; color: #6B7280; }
+
+/* ====== 仪表盘卡片 ====== */
+.dash-orders { margin-bottom: 16px; min-height: 0; }
+.dash-orders .order-counts { margin: 18px 0 8px; }
+.orders-hint {
+  text-align: center; font-size: 14px; font-weight: 700; color: #374151;
+  margin: 18px 0 6px;
 }
-.header-decor {
-  position: absolute; top: -40px; left: 50%; transform: translateX(-50%);
-  width: 200px; height: 80px; z-index: 0; pointer-events: none;
+.dash-orders .dash-foot { border-top: none; padding-top: 4px; display: flex; align-items: center; justify-content: center; gap: 2px; }
+.dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.dash-card {
+  background: #fff; border: 1px solid #F3F4F6; border-radius: 14px;
+  padding: 16px 18px; min-height: 220px;
+  display: flex; flex-direction: column;
+}
+.dash-head {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 15px; font-weight: 800; color: #1F2937; cursor: pointer;
+  margin-bottom: 14px;
+}
+.dash-head:hover { color: #10B981; }
+.order-counts { display: flex; justify-content: space-around; margin: 6px 0 12px; }
+.oc { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+.oc b { font-size: 20px; font-weight: 800; color: #1F2937; font-variant-numeric: tabular-nums; }
+.oc:hover b { color: #10B981; }
+.oc span { font-size: 12px; color: #6B7280; }
+.dash-foot {
+  margin-top: auto; text-align: center; font-size: 13px; color: #9CA3AF;
+  cursor: pointer; padding-top: 10px; border-top: 1px solid #F3F4F6;
+}
+.dash-foot:hover { color: #10B981; }
+.preview { display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 0; }
+.preview-img { width: 96px; height: 96px; border-radius: 10px; }
+.preview-title {
+  margin: 10px 0 2px; max-width: 100%; font-size: 13px; color: #374151;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.preview:hover .preview-title { color: #10B981; }
+.preview-price { margin: 0; font-size: 14px; font-weight: 700; color: #F59E0B; }
+.preview-empty {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  color: #C4C8CE; font-size: 13px;
 }
 
 .avatar-upload {
@@ -487,7 +625,7 @@ onMounted(loadData)
 }
 .avatar-upload.uploading { pointer-events: none; opacity: 0.5; }
 .avatar-upload :deep(.el-avatar) {
-  border: 3px solid rgba(255,255,255,0.5); box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  border: 3px solid #fff; box-shadow: 0 4px 16px rgba(16,185,129,0.18);
 }
 .avatar-mask {
   position: absolute; inset: 0; border-radius: 50%;
@@ -496,32 +634,8 @@ onMounted(loadData)
 }
 .avatar-upload:hover .avatar-mask { opacity: 1; }
 
-.side-header h3 { position: relative; z-index: 1; margin: 12px 0 6px; font-size: 18px; font-weight: 700; }
-.side-role { position: relative; z-index: 1; margin: 0; }
-.side-role :deep(.el-tag) {
-  font-weight: 500; border-color: rgba(255,255,255,0.4); color: #fff;
-  background: rgba(255,255,255,0.15); backdrop-filter: blur(4px);
-}
-.side-role :deep(.el-tag--danger) {
-  background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.3);
-}
-
-/* 统计行 */
-.side-stats {
-  padding: 14px 20px;
-  display: flex; justify-content: space-around;
-  background: #FAFAFA;
-  border-top: 1px solid #F3F4F6;
-  border-bottom: 1px solid #F3F4F6;
-}
-.stat-row {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 13px; color: #6B7280;
-}
-.stat-row strong { color: #1F2937; font-variant-numeric: tabular-nums; }
-
 /* 导航 */
-.side-nav { padding: 4px 0; }
+.side-nav { padding: 8px 0; }
 .nav-item {
   display: flex; align-items: center; gap: 10px;
   padding: 13px 20px; cursor: pointer;
@@ -630,14 +744,14 @@ onMounted(loadData)
 /* ====== 响应式 ====== */
 @media (max-width: 1024px) {
   .profile-grid { grid-template-columns: repeat(3, 1fr); }
+  .order-counts { flex-wrap: wrap; gap: 12px; }
 }
 @media (max-width: 768px) {
   .profile-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .content-card { padding: 20px 16px; }
-  .side-stats { padding: 12px 10px; }
-  .stat-row { font-size: 12px; }
-  .side-header { padding: 24px 12px 18px; }
-  .side-header h3 { font-size: 16px; }
+  .banner-card { flex-direction: column; align-items: flex-start; gap: 14px; padding: 18px; }
+  .banner-stats { width: 100%; justify-content: space-around; }
+  .dash-grid { grid-template-columns: 1fr; }
 }
 /* 手机端：侧栏导航改顶部横向滚动 */
 @media (max-width: 480px) {
@@ -663,7 +777,7 @@ onMounted(loadData)
     border-bottom-color: #10B981;
     padding-left: 14px;
   }
-  .profile-grid { grid-template-columns: 1fr; }
+  .profile-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .content-card { padding: 16px 14px; }
   .content-title { font-size: 18px; }
   .profile-form { max-width: 100%; }

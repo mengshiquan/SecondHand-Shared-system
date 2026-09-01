@@ -16,6 +16,7 @@ import com.campus.secondhand.entity.Product;
 import com.campus.secondhand.mapper.FavoriteMapper;
 import com.campus.secondhand.mapper.ProductMapper;
 import com.campus.secondhand.service.ProductService;
+import com.campus.secondhand.service.NotificationService;
 import com.campus.secondhand.service.UserService;
 import com.campus.secondhand.util.RedisCacheUtil;
 import com.campus.secondhand.util.UserContext;
@@ -33,6 +34,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 商品服务实现
@@ -50,6 +52,8 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     private FavoriteMapper favoriteMapper;
     @Autowired
     private UserService userService;
+    @Autowired
+    private NotificationService notificationService;
 
     /** Lua 脚本：key 不存在时以 DB 值为基准初始化并自增，避免并发初始化覆盖计数 */
     private static final DefaultRedisScript<Long> INIT_INCR_SCRIPT = new DefaultRedisScript<>(
@@ -179,6 +183,42 @@ public class ProductServiceImpl extends ServiceImpl<ProductMapper, Product> impl
     @Override
     public void evictDetailCache(Long productId) {
         cacheUtil.delete(String.format(RedisKeyConstants.CACHE_PRODUCT_DETAIL, productId));
+    }
+
+    @Override
+    public void contactSeller(Long productId, String message) {
+        Long userId = UserContext.getUserId();
+        if (message == null || message.trim().isEmpty()) {
+            throw new BusinessException("请输入咨询内容");
+        }
+        if (message.trim().length() > 200) {
+            throw new BusinessException("咨询内容不能超过 200 字");
+        }
+        Product product = getById(productId);
+        if (product == null) throw new BusinessException("商品不存在");
+        if (!"ON_SALE".equals(product.getStatus())) throw new BusinessException("该商品已不在售，无法咨询");
+        if (product.getUserId().equals(userId)) throw new BusinessException("不能咨询自己");
+        // 频控：同一买家对同一卖家每天最多 10 条咨询，防止通知轰炸；Redis 异常时降级放行
+        String limitKey = "contact:limit:" + userId + ":" + product.getUserId();
+        try {
+            Long count = stringRedisTemplate.opsForValue().increment(limitKey);
+            if (count != null && count == 1L) {
+                stringRedisTemplate.expire(limitKey, 1, TimeUnit.DAYS);
+            }
+            if (count != null && count > 10) {
+                throw new BusinessException("今日咨询已达上限，请明天再试");
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("咨询频控查询失败，放行。buyerId={}", userId, e);
+        }
+        com.campus.secondhand.entity.User buyer = userService.getById(userId);
+        String nickname = buyer != null && buyer.getNickname() != null ? buyer.getNickname() : String.valueOf(userId);
+        // 以通知形式送达卖家，卖家在消息通知中即可查看
+        notificationService.send(product.getUserId(), "收到商品咨询",
+                "用户「" + nickname + "」咨询你的商品「" + product.getTitle() + "」：" + message.trim(),
+                "CONTACT");
     }
 
     @Override

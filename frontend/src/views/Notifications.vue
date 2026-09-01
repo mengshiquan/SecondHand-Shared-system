@@ -85,8 +85,6 @@ onMounted(load)
 
 <style scoped>
 .page-header { margin-bottom: 24px; }
-.page-title { font-size: 24px; font-weight: 800; color: #1F2937; margin: 0 0 4px; }
-.page-sub { font-size: 14px; color: #9CA3AF; margin: 0; }
 
 .notify-actions { display: flex; gap: 8px; margin-bottom: 16px; justify-content: flex-end; }
 
@@ -132,7 +130,7 @@ onMounted(load)
   .notify-actions { justify-content: stretch; }
   .notify-actions .el-button { flex: 1; }
   .notify-card { border-radius: 12px; }
-  .page-title { font-size: 20px; }
+  
 }
 /* 手机端：缩小间距和字体 */
 @media (max-width: 480px) {

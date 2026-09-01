@@ -7,6 +7,24 @@
       <p class="page-sub">{{ isEdit ? '修改商品信息并保存' : '填写商品信息，让更多人看到你的闲置好物' }}</p>
     </div>
 
+    <!-- 校园认证状态提示：未通过认证的用户无法发布 -->
+    <el-alert
+      v-if="!isEdit && verifyStatus === 'PENDING'"
+      type="warning"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 16px"
+      title="你的校园身份认证正在审核中，管理员审核通过后即可发布商品"
+    />
+    <el-alert
+      v-else-if="!isEdit && verifyStatus === 'REJECTED'"
+      type="error"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 16px"
+      title="你的校园身份认证未通过，请联系管理员重新审核后才能发布商品"
+    />
+
     <div class="form-card">
       <div class="form-card-glow"></div>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px" class="publish-form">
@@ -78,6 +96,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Edit, PriceTag, Picture, Document } from '@element-plus/icons-vue'
 import { publishProduct, updateProduct, getProductDetail } from '@/api/product'
+import { getUserInfo } from '@/api/user'
 import ImageUpload from '@/components/ImageUpload.vue'
 import CategoryPicker from '@/components/CategoryPicker.vue'
 
@@ -86,6 +105,8 @@ const route = useRoute()
 const formRef = ref()
 const loading = ref(false)
 const isEdit = ref(false)
+// 认证状态默认按已认证处理，避免接口失败时误拦已认证用户；实际拦截以后端 VerifyGuard 为准
+const verifyStatus = ref('APPROVED')
 
 const form = reactive({
   id: null,
@@ -126,6 +147,12 @@ onMounted(async () => {
     isEdit.value = true
     const res = await getProductDetail(route.query.id)
     Object.assign(form, res.data)
+  } else {
+    // 新发布时检查校园认证状态，提前告知用户，避免提交后才报错
+    try {
+      const res = await getUserInfo()
+      verifyStatus.value = res.data?.verifyStatus || 'PENDING'
+    } catch { /* 忽略，后端发布时仍会拦截 */ }
   }
 })
 </script>
@@ -134,8 +161,6 @@ onMounted(async () => {
 /* ====== 页面标题 ====== */
 .page-header { margin-bottom: 24px; }
 .back-btn { color: #6B7280; font-weight: 500; margin-bottom: 8px; }
-.page-title { font-size: 24px; font-weight: 800; color: #1F2937; margin: 0 0 4px; }
-.page-sub { font-size: 14px; color: #9CA3AF; margin: 0; }
 
 /* ====== 表单卡片 ====== */
 .form-card {
@@ -187,7 +212,7 @@ onMounted(async () => {
 }
 /* 手机端 */
 @media (max-width: 480px) {
-  .page-title { font-size: 20px; }
+  
   .form-card { padding: 16px 12px; border-radius: 12px; }
   .publish-form { max-width: 100%; }
   .section-head { font-size: 14px; }

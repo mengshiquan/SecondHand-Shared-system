@@ -27,3 +27,7 @@ export function deleteProduct(id) {
 export function offShelfProduct(id) {
   return request.put(`/product/${id}/off-shelf`)
 }
+
+export function contactSeller(id, data) {
+  return request.post(`/product/${id}/contact`, data)
+}

@@ -66,6 +66,9 @@
         <if test="query.keyword != null and query.keyword != ''">
             (p.title LIKE CONCAT('%', #{query.keyword}, '%') OR p.description LIKE CONCAT('%', #{query.keyword}, '%')) DESC,
         </if>
+        <if test="query.sortBy == 'price_asc'">p.price ASC,</if>
+        <if test="query.sortBy == 'price_desc'">p.price DESC,</if>
+        <if test="query.sortBy == 'view_desc'">p.view_count DESC,</if>
         p.create_time DESC
     </select>
 

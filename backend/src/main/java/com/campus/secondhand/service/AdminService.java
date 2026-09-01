@@ -18,7 +18,7 @@ public interface AdminService {
 
     void updateUserStatus(Long userId, Integer status);
 
-    IPage<ProductVO> productPage(Integer pageNum, Integer pageSize, String keyword);
+    IPage<ProductVO> productPage(Integer pageNum, Integer pageSize, String keyword, Long categoryId, Long parentCategoryId, String status);
 
     IPage<OrderVO> orderPage(Integer pageNum, Integer pageSize, String status, String refundStatus);
 
@@ -74,5 +74,9 @@ public interface AdminService {
 
     void deleteUser(Long id);
 
-    void resetUserPassword(Long id);
+    /** 重置密码：新密码为空时用默认密码，返回明文新密码供管理员告知用户 */
+    String resetUserPassword(Long id, String newPassword);
+
+    /** 调整用户角色（仅超管）：USER ↔ ADMIN */
+    void updateUserRole(Long id, String role);
 }

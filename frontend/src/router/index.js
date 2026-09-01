@@ -30,6 +30,7 @@ const routes = [
       { path: 'profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { requiresAuth: true } },
       { path: 'cart', name: 'Cart', component: () => import('@/views/Cart.vue'), meta: { requiresAuth: true } },
       { path: 'orders', name: 'MyOrders', component: () => import('@/views/MyOrders.vue'), meta: { requiresAuth: true } },
+      { path: 'chat/:peerId?', name: 'Chat', component: () => import('@/views/Chat.vue'), meta: { requiresAuth: true } },
       { path: 'admin', name: 'Admin', component: () => import('@/views/Admin.vue'), meta: { requiresAuth: true, requiresAdmin: true } }
     ]
   }
@@ -55,11 +56,7 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  if (to.meta.guest && token) {
-    next('/')
-    return
-  }
-
+  // 已登录也允许访问登录页：多标签页场景下用于切换账号
   next()
 })
 

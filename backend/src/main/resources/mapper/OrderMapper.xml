@@ -19,7 +19,14 @@
         <if test="role != 'ADMIN'">
             AND (o.buyer_id = #{userId} OR o.seller_id = #{userId})
         </if>
-        <if test="status != null and status != ''">
+        <!-- 非管理员：退款进行中的订单归入“退款/售后”页签，不再出现在状态页签 -->
+        <if test="role != 'ADMIN' and (status == null or status != 'REFUND')">
+            AND (o.refund_status IS NULL OR o.refund_status NOT IN ('REQUESTED','ARBITRATION'))
+        </if>
+        <if test="status != null and status == 'REFUND'">
+            AND o.refund_status IN ('REQUESTED','ARBITRATION')
+        </if>
+        <if test="status != null and status != '' and status != 'REFUND'">
             AND o.status = #{status}
         </if>
         <if test="refundStatus != null and refundStatus != ''">

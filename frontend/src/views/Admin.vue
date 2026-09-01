@@ -60,10 +60,16 @@
         </el-row>
       </el-tab-pane>
 
-      <!-- 用户管理 -->
+      <!-- 用户管理：下设普通用户管理 / 管理员管理两个分类 -->
       <el-tab-pane name="users">
         <template #label><el-icon><User /></el-icon> 用户管理</template>
-        <div class="table-card">
+        <el-tabs v-model="userSubTab" type="card" style="margin-top:0">
+          <el-tab-pane name="normal" label="普通用户管理" />
+          <el-tab-pane name="admins" label="管理员管理" />
+        </el-tabs>
+
+        <!-- 普通用户管理 -->
+        <div v-if="userSubTab === 'normal'" class="table-card" style="margin-top:12px">
           <div class="table-header">
             <span>共 <strong>{{ userTotal }}</strong> 个用户</span>
             <div class="table-header-actions">
@@ -76,12 +82,15 @@
               <el-button v-if="selectedVerifyUsers.length" size="small" type="danger" plain @click="handleBatchVerify('REJECT')">
                 批量拒绝（{{ selectedVerifyUsers.length }}）
               </el-button>
+              <el-button size="small" :icon="Download" @click="handleExport('users')">导出</el-button>
               <el-button type="primary" size="small" :icon="Plus" @click="openUserDialog()">新增用户</el-button>
             </div>
           </div>
           <el-table :data="users" stripe @selection-change="rows => selectedVerifyUsers = rows">
             <el-table-column type="selection" width="44" :selectable="row => row.verifyStatus === 'PENDING'" />
-            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column label="ID" width="70">
+              <template #default="{ $index }">{{ $index + 1 }}</template>
+            </el-table-column>
             <el-table-column prop="username" label="用户名" min-width="110" />
             <el-table-column prop="nickname" label="昵称" min-width="110" />
             <el-table-column prop="role" label="角色" width="110">
@@ -98,6 +107,12 @@
                 </el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="学号 / 学校" min-width="150">
+              <template #default="{ row }">
+                <span v-if="row.studentId || row.schoolName">{{ row.schoolName || '-' }} · {{ row.studentId || '-' }}</span>
+                <span v-else style="color:#D1D5DB">未提交</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="status" label="状态" width="90">
               <template #default="{ row }">
                 <el-tag :type="row.status === 1 ? 'success' : 'danger'" effect="plain">
@@ -105,10 +120,25 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="300">
+            <el-table-column label="操作" min-width="420">
               <template #default="{ row }">
-                <el-button size="small" @click="openUserEditDialog(row)">编辑</el-button>
-                <el-button size="small" type="warning" plain @click="handleResetPassword(row)">重置密码</el-button>
+                <el-button v-if="row.verifyStatus === 'PENDING'" size="small" type="success" @click="handleVerify(row, 'APPROVE')">通过</el-button>
+                <el-button v-if="row.verifyStatus === 'PENDING'" size="small" type="danger" plain @click="handleVerify(row, 'REJECT')">拒绝</el-button>
+                <el-button size="small" :disabled="row.role === 'SUPER_ADMIN'" @click="openUserEditDialog(row)">编辑</el-button>
+                <el-button size="small" type="warning" plain :disabled="row.role === 'SUPER_ADMIN'" @click="handleResetPassword(row)">重置密码</el-button>
+                <el-button
+                  v-if="isSuperAdmin && row.role === 'USER'"
+                  size="small"
+                  type="success"
+                  plain
+                  @click="handleSetRole(row, 'ADMIN')"
+                >设为管理员</el-button>
+                <el-button
+                  v-if="isSuperAdmin && row.role === 'ADMIN'"
+                  size="small"
+                  plain
+                  @click="handleSetRole(row, 'USER')"
+                >取消管理员</el-button>
                 <el-button
                   size="small"
                   :type="row.status === 1 ? 'danger' : 'success'"
@@ -120,18 +150,92 @@
             </el-table-column>
           </el-table>
         </div>
+
+        <!-- 管理员管理：普通管理员可查看全部，仅超级管理员可操作 -->
+        <div v-if="userSubTab === 'admins'" class="table-card" style="margin-top:12px">
+          <div class="table-header">
+            <span>共 <strong>{{ admins.length }}</strong> 个管理员</span>
+            <el-button v-if="isSuperAdmin" type="primary" size="small" :icon="Plus" @click="openAdminDialog()">新增管理员</el-button>
+          </div>
+          <el-table :data="admins" stripe>
+            <el-table-column label="ID" width="70">
+              <template #default="{ $index }">{{ $index + 1 }}</template>
+            </el-table-column>
+            <el-table-column prop="username" label="用户名" min-width="120" />
+            <el-table-column prop="nickname" label="昵称" min-width="120" />
+            <el-table-column label="角色" width="110">
+              <template #default="{ row }">
+                <el-tag v-if="row.role === 'SUPER_ADMIN'" type="danger" size="small" effect="plain">超级管理员</el-tag>
+                <el-tag v-else type="warning" size="small" effect="plain">管理员</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="状态" width="90">
+              <template #default="{ row }">
+                <el-tag :type="row.status === 1 ? 'success' : 'danger'" effect="plain">
+                  {{ row.status === 1 ? '正常' : '禁用' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column label="创建时间" width="165">
+              <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
+            </el-table-column>
+            <el-table-column label="操作" width="360">
+              <template #default="{ row }">
+                <template v-if="isSuperAdmin && row.role !== 'SUPER_ADMIN'">
+                  <el-button size="small" type="primary" plain @click="openAdminEditDialog(row)">编辑</el-button>
+                  <el-button
+                    v-if="row.status === 1"
+                    size="small"
+                    type="warning"
+                    plain
+                    @click="toggleAdminStatus(row)"
+                  >禁用</el-button>
+                  <el-button
+                    v-else
+                    size="small"
+                    type="success"
+                    @click="toggleAdminStatus(row)"
+                  >启用</el-button>
+                  <el-button size="small" type="danger" @click="handleDeleteAdmin(row)">删除</el-button>
+                  <el-button size="small" type="warning" @click="handleRevokeAdmin(row)">取消管理员</el-button>
+                </template>
+                <span v-else class="text-muted">{{ isSuperAdmin ? '-' : '仅查看，无操作权限' }}</span>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </el-tab-pane>
 
-      <!-- 商品管理 -->
+      <!-- 商品管理：默认全部，支持按分类/状态筛选 -->
       <el-tab-pane name="products">
         <template #label><el-icon><Goods /></el-icon> 商品管理</template>
         <div class="table-card">
           <div class="table-header">
             <span>共 <strong>{{ adminProducts.length }}</strong> 件商品</span>
+            <div class="table-header-actions">
+              <el-cascader
+                v-model="productCategoryFilter"
+                :options="categoryOptions"
+                :props="{ checkStrictly: true }"
+                clearable
+                placeholder="按分类筛选"
+                size="small"
+                style="width: 200px"
+                @change="loadAdminProducts"
+              />
+              <el-select v-model="productStatusFilter" clearable placeholder="按状态筛选" size="small" style="width: 130px" @change="loadAdminProducts">
+                <el-option label="在售" value="ON_SALE" />
+                <el-option label="已下架" value="OFF_SHELF" />
+                <el-option label="已售出" value="SOLD" />
+              </el-select>
+              <el-button size="small" @click="loadAdminProducts">刷新</el-button>
+              <el-button size="small" :icon="Download" @click="handleExport('products')">导出</el-button>
+            </div>
           </div>
           <el-table :data="adminProducts" stripe>
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column prop="title" label="标题" show-overflow-tooltip />
+            <el-table-column prop="categoryName" label="分类" width="110" />
             <el-table-column prop="price" label="价格" width="100" />
             <el-table-column prop="sellerName" label="卖家" />
             <el-table-column prop="status" label="状态" width="100">
@@ -162,13 +266,23 @@
 
       <!-- 订单管理 -->
       <el-tab-pane name="orders">
-        <template #label><el-icon><Document /></el-icon> 订单管理</template>
+        <template #label><el-icon><Document /></el-icon> 订单管理
+          <span v-if="adminNotify.pendingArbitrations > 0" class="tab-badge-dot">{{ adminNotify.pendingArbitrations }}</span>
+        </template>
         <div class="table-card">
           <div class="table-header">
             <span>共 <strong>{{ adminOrders.length }}</strong> 笔订单</span>
             <div class="table-header-actions">
+              <el-select v-model="adminOrderStatusFilter" clearable placeholder="按状态筛选" size="small" style="width: 130px" @change="loadAdminOrders">
+                <el-option label="待付款" value="PENDING" />
+                <el-option label="已付款" value="PAID" />
+                <el-option label="已发货" value="SHIPPED" />
+                <el-option label="已完成" value="COMPLETED" />
+                <el-option label="已取消" value="CANCELLED" />
+              </el-select>
               <el-checkbox v-model="arbitrationOnly" @change="loadAdminOrders">仅看待仲裁</el-checkbox>
               <el-button size="small" @click="loadAdminOrders">刷新</el-button>
+              <el-button size="small" :icon="Download" @click="handleExport('orders')">导出</el-button>
             </div>
           </div>
           <el-table :data="adminOrders" stripe>
@@ -227,12 +341,23 @@
         <template #label><el-icon><Grid /></el-icon> 分类管理</template>
         <div class="table-card">
           <div class="table-header">
-            <span>共 <strong>{{ categories.length }}</strong> 个分类</span>
-            <el-button type="primary" size="small" :icon="Plus" @click="openCategoryDialog()">新增分类</el-button>
+            <span>共 <strong>{{ filteredCategories.length }}</strong> 个分类</span>
+            <div class="table-header-actions">
+              <el-select v-model="categoryParentFilter" clearable placeholder="按上级分类筛选" size="small" style="width: 160px">
+                <el-option v-for="m in mainCategories" :key="m.id" :label="m.name" :value="m.id" />
+              </el-select>
+              <el-button type="primary" size="small" :icon="Plus" @click="openCategoryDialog()">新增分类</el-button>
+            </div>
           </div>
-          <el-table :data="categories" stripe>
+          <el-table :data="filteredCategories" stripe>
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column prop="name" label="名称" />
+            <el-table-column label="上级分类" width="140">
+              <template #default="{ row }">
+                <el-tag v-if="!row.parentId" size="small" type="success" effect="plain">一级分类</el-tag>
+                <span v-else>{{ categoryNameMap[row.parentId] || '-' }}</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="sort" label="排序" width="80" />
             <el-table-column label="操作" width="160">
               <template #default="{ row }">
@@ -246,7 +371,10 @@
 
       <!-- 小黑屋 -->
       <el-tab-pane name="blacklist">
-        <template #label><el-icon><WarningFilled /></el-icon> 小黑屋</template>
+        <template #label>
+          <el-icon><WarningFilled /></el-icon> 小黑屋
+          <span v-if="adminNotify.blacklistCount" class="tab-badge-dot">{{ adminNotify.blacklistCount }}</span>
+        </template>
         <div class="table-card">
           <div class="table-header">
             <span>共 <strong>{{ blacklistTotal }}</strong> 个受限用户</span>
@@ -281,7 +409,10 @@
 
       <!-- 投诉 / 申诉 -->
       <el-tab-pane name="reports">
-        <template #label><el-icon><Bell /></el-icon> 投诉 / 申诉</template>
+        <template #label>
+          <el-icon><Bell /></el-icon> 投诉 / 申诉
+          <span v-if="adminNotify.pendingComplaints + adminNotify.pendingAppeals" class="tab-badge-dot">{{ adminNotify.pendingComplaints + adminNotify.pendingAppeals }}</span>
+        </template>
         <el-tabs v-model="reportSubTab" type="card" style="margin-top:0">
           <el-tab-pane name="complaints" label="投诉列表" />
           <el-tab-pane name="appeals" label="申诉列表" />
@@ -330,52 +461,6 @@
                   <el-button size="small" @click="handleReport(row, 'appeal', false)">驳回</el-button>
                 </template>
                 <span v-else class="text-muted">已处理</span>
-              </template>
-            </el-table-column>
-          </el-table>
-        </div>
-      </el-tab-pane>
-
-      <!-- 管理员管理（仅超级管理员） -->
-      <el-tab-pane v-if="isSuperAdmin" name="admins">
-        <template #label><el-icon><Avatar /></el-icon> 管理员管理</template>
-        <div class="table-card">
-          <div class="table-header">
-            <span>共 <strong>{{ admins.length }}</strong> 个管理员</span>
-            <el-button type="primary" size="small" :icon="Plus" @click="openAdminDialog()">新增管理员</el-button>
-          </div>
-          <el-table :data="admins" stripe>
-            <el-table-column prop="id" label="ID" width="70" />
-            <el-table-column prop="username" label="用户名" min-width="120" />
-            <el-table-column prop="nickname" label="昵称" min-width="120" />
-            <el-table-column label="角色" width="110">
-              <template #default="{ row }">
-                <el-tag v-if="row.role === 'SUPER_ADMIN'" type="danger" size="small" effect="plain">超级管理员</el-tag>
-                <el-tag v-else type="warning" size="small" effect="plain">管理员</el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="90">
-              <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'danger'" effect="plain">
-                  {{ row.status === 1 ? '正常' : '禁用' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="创建时间" width="165">
-              <template #default="{ row }">{{ formatTime(row.createTime) }}</template>
-            </el-table-column>
-            <el-table-column label="操作" width="260">
-              <template #default="{ row }">
-                <template v-if="row.role !== 'SUPER_ADMIN'">
-                  <el-button size="small" @click="openAdminEditDialog(row)">编辑</el-button>
-                  <el-button
-                    size="small"
-                    :type="row.status === 1 ? 'danger' : 'success'"
-                    @click="toggleAdminStatus(row)"
-                  >{{ row.status === 1 ? '禁用' : '启用' }}</el-button>
-                  <el-button size="small" type="danger" plain @click="handleDeleteAdmin(row)">删除</el-button>
-                </template>
-                <span v-else class="text-muted">-</span>
               </template>
             </el-table-column>
           </el-table>
@@ -467,9 +552,20 @@
       </el-tab-pane>
     </el-tabs>
     <el-dialog v-model="categoryDialogVisible" :title="categoryForm.id ? '编辑分类' : '新增分类'" width="400px">
-      <el-form :model="categoryForm" label-width="60px">
+      <el-form :model="categoryForm" label-width="80px">
+        <el-form-item label="上级分类">
+          <el-select v-model="categoryForm.parentId" clearable placeholder="不选则为一级大分类" style="width: 100%">
+            <el-option
+              v-for="m in mainCategories"
+              :key="m.id"
+              :label="m.name"
+              :value="m.id"
+              :disabled="m.id === categoryForm.id"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="名称">
-          <el-input v-model="categoryForm.name" />
+          <el-input v-model="categoryForm.name" placeholder="请输入分类名称" />
         </el-form-item>
         <el-form-item label="排序">
           <el-input-number v-model="categoryForm.sort" :min="0" />
@@ -572,9 +668,11 @@ import {
   getAdminComplaints, handleComplaint,
   getAdminAppeals, handleAppeal,
   getAdminList, createAdmin, updateAdmin, deleteAdmin, updateAdminStatus,
-  createUser, updateUser, deleteUser, resetUserPassword, verifyUsers,
+  createUser, updateUser, deleteUser, resetUserPassword, updateUserRole, verifyUsers,
+  exportUsers, exportProducts, exportOrders,
   updateProductStatus, deleteAdminProduct,
-  updateAdminOrderStatus, deleteAdminOrder, arbitrateOrder
+  updateAdminOrderStatus, deleteAdminOrder, arbitrateOrder,
+  getNotifications
 } from '@/api/admin'
 import { getSalesStats, exportSales } from '@/api/stats'
 import { getCategoryList } from '@/api/category'
@@ -584,12 +682,34 @@ const userStore = useUserStore()
 const isSuperAdmin = computed(() => userStore.userInfo?.role === 'SUPER_ADMIN')
 
 const activeTab = ref('dashboard')
+// 用户管理子分类：普通用户管理 / 管理员管理（仅超管可见后者）
+const userSubTab = ref('normal')
 const dashboard = ref(null)
 const users = ref([])
 const userTotal = ref(0)
 const adminProducts = ref([])
 const adminOrders = ref([])
 const categories = ref([])
+
+// 商品/订单/分类管理筛选状态（默认全部，筛选后实时刷新列表）
+const productCategoryFilter = ref([])
+const productStatusFilter = ref('')
+const adminOrderStatusFilter = ref('')
+const categoryParentFilter = ref(null)
+
+const mainCategories = computed(() => categories.value.filter(c => !c.parentId))
+const categoryNameMap = computed(() => Object.fromEntries(categories.value.map(c => [c.id, c.name])))
+const filteredCategories = computed(() => categoryParentFilter.value == null
+  ? categories.value
+  : categories.value.filter(c => c.parentId === categoryParentFilter.value))
+// 商品分类筛选级联选项：一级分类可直接选（含其全部子类），也可选到子类
+const categoryOptions = computed(() => mainCategories.value.map(m => ({
+  value: m.id,
+  label: m.name,
+  children: categories.value
+    .filter(c => c.parentId === m.id)
+    .map(s => ({ value: s.id, label: s.name }))
+})))
 
 // 用户管理：待审核筛选 + 批量审核 + 新增/编辑/删除/重置密码
 const pendingFilter = ref(false)
@@ -646,12 +766,21 @@ let salesPieChart = null
 let salesBarChart = null
 
 const categoryDialogVisible = ref(false)
-const categoryForm = reactive({ id: null, name: '', sort: 0 })
+const categoryForm = reactive({ id: null, parentId: null, name: '', sort: 0 })
 
 // 小黑屋
 const blacklistUsers = ref([])
 const blacklistTotal = ref(0)
 const scanning = ref(false)
+
+// 后台待处理事项计数：与顶栏角标同源，进入后台后在对应 Tab 标签上标红，指明消息在哪个模块
+const adminNotify = reactive({ pendingComplaints: 0, pendingAppeals: 0, blacklistCount: 0, pendingArbitrations: 0 })
+async function loadAdminNotify() {
+  try {
+    const res = await getNotifications()
+    Object.assign(adminNotify, res.data)
+  } catch {}
+}
 
 // 投诉/申诉
 const reportSubTab = ref('complaints')
@@ -799,6 +928,15 @@ async function handleBatchVerify(action) {
   loadUsers()
 }
 
+async function handleVerify(row, action) {
+  const tip = action === 'APPROVE' ? '通过' : '拒绝'
+  const info = row.studentId || row.schoolName ? `（${row.schoolName || '-'} · ${row.studentId || '-'}）` : ''
+  await ElMessageBox.confirm(`确认${tip}用户「${row.username}」的认证申请${info}？`, '认证审核', { type: 'warning' })
+  await verifyUsers([row.id], action)
+  ElMessage.success(`已${tip}`)
+  loadUsers()
+}
+
 function openUserDialog() {
   Object.assign(userForm, { username: '', password: '', nickname: '', role: 'USER' })
   userDialogVisible.value = true
@@ -835,9 +973,34 @@ async function saveUserEdit() {
 }
 
 async function handleResetPassword(row) {
-  await ElMessageBox.confirm(`确认重置用户「${row.username}」的密码？`, '重置密码', { type: 'warning' })
-  await resetUserPassword(row.id)
-  ElMessage.success('密码已重置')
+  let newPassword = ''
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `为用户「${row.username}」设置新密码；留空则重置为默认密码 123456`,
+      '重置密码',
+      {
+        confirmButtonText: '确认重置',
+        cancelButtonText: '取消',
+        inputPlaceholder: '自定义新密码（6-20位，可留空）',
+        inputValidator: v => !v || (v.length >= 6 && v.length <= 20) || '密码长度需为6-20位'
+      }
+    )
+    newPassword = value || ''
+  } catch { return }
+  const res = await resetUserPassword(row.id, newPassword)
+  ElMessageBox.alert(
+    `用户「${row.username}」的密码已重置为：${res.data}，请及时告知该用户。`,
+    '重置成功',
+    { confirmButtonText: '知道了', type: 'success' }
+  )
+}
+
+async function handleSetRole(row, role) {
+  const tip = role === 'ADMIN' ? '设为管理员' : '取消管理员权限'
+  await ElMessageBox.confirm(`确认将用户「${row.username}」${tip}？`, '角色调整', { type: 'warning' })
+  await updateUserRole(row.id, role)
+  ElMessage.success(role === 'ADMIN' ? '已设为管理员' : '已取消管理员权限')
+  loadUsers()
 }
 
 async function handleDeleteUser(row) {
@@ -848,12 +1011,26 @@ async function handleDeleteUser(row) {
 }
 
 async function loadAdminProducts() {
-  const res = await getAdminProducts({ pageNum: 1, pageSize: 50 })
+  // 分类筛选依赖分类数据，首次进入商品管理时自动加载
+  if (!categories.value.length) loadCategories()
+  const sel = productCategoryFilter.value || []
+  const res = await getAdminProducts({
+    pageNum: 1,
+    pageSize: 50,
+    parentCategoryId: sel.length === 1 ? sel[0] : undefined,
+    categoryId: sel.length === 2 ? sel[1] : undefined,
+    status: productStatusFilter.value || undefined
+  })
   adminProducts.value = res.data.records
 }
 
 async function loadAdminOrders() {
-  const res = await getAdminOrders({ pageNum: 1, pageSize: 50, refundStatus: arbitrationOnly.value ? 'ARBITRATION' : undefined })
+  const res = await getAdminOrders({
+    pageNum: 1,
+    pageSize: 50,
+    status: adminOrderStatusFilter.value || undefined,
+    refundStatus: arbitrationOnly.value ? 'ARBITRATION' : undefined
+  })
   adminOrders.value = res.data.records
 }
 
@@ -975,6 +1152,13 @@ async function handleDeleteAdmin(row) {
   loadAdmins()
 }
 
+async function handleRevokeAdmin(row) {
+  await ElMessageBox.confirm(`确认取消「${row.username}」的管理员权限？取消后该账号将变为普通用户。`, '取消管理员', { type: 'warning' })
+  await updateUserRole(row.id, 'USER')
+  ElMessage.success('已取消管理员权限')
+  loadAdmins()
+}
+
 // === 销售统计 ===
 function formatAmount(v) {
   return Number(v || 0).toFixed(2)
@@ -1063,6 +1247,25 @@ function initSalesBarChart(dom) {
   })
 }
 
+// 用户/商品/订单表格导出 Excel，便于离线统计
+async function handleExport(kind) {
+  const conf = {
+    users: [exportUsers, '用户管理'],
+    products: [exportProducts, '商品管理'],
+    orders: [exportOrders, '订单管理']
+  }[kind]
+  const blob = await conf[0]()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${conf[1]}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  ElMessage.success('导出成功')
+}
+
 async function handleExportSales() {
   exporting.value = true
   try {
@@ -1086,16 +1289,20 @@ async function handleExportSales() {
 
 function openCategoryDialog(row) {
   if (row) {
-    Object.assign(categoryForm, { id: row.id, name: row.name, sort: row.sort })
+    Object.assign(categoryForm, { id: row.id, parentId: row.parentId || null, name: row.name, sort: row.sort })
   } else {
-    Object.assign(categoryForm, { id: null, name: '', sort: 0 })
+    Object.assign(categoryForm, { id: null, parentId: null, name: '', sort: 0 })
   }
   categoryDialogVisible.value = true
 }
 
 async function saveCategoryForm() {
+  if (!categoryForm.name.trim()) {
+    ElMessage.warning('请输入分类名称')
+    return
+  }
   await saveCategory(categoryForm)
-  ElMessage.success('保存成功')
+  ElMessage.success(categoryForm.parentId ? '子分类保存成功' : '一级分类保存成功')
   categoryDialogVisible.value = false
   loadCategories()
 }
@@ -1151,6 +1358,7 @@ async function handleUnblacklist(userId) {
   await unblacklistUser(userId)
   ElMessage.success('已解封')
   loadBlacklist()
+  loadAdminNotify()
 }
 
 // === 投诉/申诉 ===
@@ -1185,29 +1393,47 @@ async function handleReport(row, type, approve) {
     loadAppeals()
     loadBlacklist()
   }
+  loadAdminNotify()
   ElMessage.success(`${action}成功`)
 }
 
 watch(activeTab, (tab) => {
   if (tab === 'dashboard') loadDashboardData()
-  if (tab === 'users') loadUsers()
+  if (tab === 'users') loadUserTabData()
   if (tab === 'products') loadAdminProducts()
   if (tab === 'orders') loadAdminOrders()
   if (tab === 'categories') loadCategories()
-  if (tab === 'blacklist') loadBlacklist()
-  if (tab === 'reports') { loadComplaints(); loadAppeals() }
-  if (tab === 'admins') loadAdmins()
+  if (tab === 'blacklist') { loadBlacklist(); loadAdminNotify() }
+  if (tab === 'reports') { loadComplaints(); loadAppeals(); loadAdminNotify() }
   if (tab === 'sales') loadSalesStats()
 })
 
+watch(userSubTab, () => {
+  if (activeTab.value === 'users') loadUserTabData()
+})
+
+/** 按用户管理当前子分类加载对应数据 */
+function loadUserTabData() {
+  if (userSubTab.value === 'admins') loadAdmins()
+  else loadUsers()
+}
+
 onMounted(() => {
-  const tab = sessionStorage.getItem('adminTab')
-  if (tab) { activeTab.value = tab; sessionStorage.removeItem('adminTab') }
+  let tab = sessionStorage.getItem('adminTab')
+  if (tab) {
+    // 管理员管理已并入用户管理子分类，兼容旧标记；watch 会按子分类加载数据
+    if (tab === 'admins') { tab = 'users'; userSubTab.value = 'admins' }
+    // 从顶栏铃铛“新仲裁”进入：直达订单管理并勾选“仅看待仲裁”
+    if (tab === 'ordersArb') { tab = 'orders'; arbitrationOnly.value = true }
+    activeTab.value = tab
+    sessionStorage.removeItem('adminTab')
+  }
   if (activeTab.value === 'dashboard') loadDashboardData()
   else if (activeTab.value === 'blacklist') loadBlacklist()
   else if (activeTab.value === 'reports') { loadComplaints(); loadAppeals() }
-  else if (activeTab.value === 'admins') loadAdmins()
   else if (activeTab.value === 'sales') loadSalesStats()
+  // 顶栏角标的来源数据同步加载，Tab 标签上直接标红待处理模块
+  loadAdminNotify()
   window.addEventListener('resize', handleResize)
 })
 
@@ -1223,8 +1449,6 @@ onBeforeUnmount(() => {
 <style scoped>
 /* ====== 页面标题 ====== */
 .page-header { margin-bottom: 24px; }
-.page-title { font-size: 24px; font-weight: 800; color: #1F2937; margin: 0 0 4px; }
-.page-sub { font-size: 14px; color: #9CA3AF; margin: 0; }
 
 /* ====== 标签页 ====== */
 .admin-tabs { margin-top: 4px; }
@@ -1302,6 +1526,16 @@ onBeforeUnmount(() => {
 .table-header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .text-muted { color: #9CA3AF; }
 
+/* Tab 标签待处理角标：与顶栏通知同源，指明消息在哪个模块 */
+.tab-badge-dot {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  margin-left: 4px; border-radius: 9px;
+  background: #EF4444; color: #fff;
+  font-size: 11px; font-weight: 700;
+  vertical-align: 2px;
+}
+
 /* ====== 销售统计 ====== */
 .sales-toolbar {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -1328,7 +1562,6 @@ onBeforeUnmount(() => {
 }
 /* 手机端：统计卡每行2个，表格横向滚动 */
 @media (max-width: 480px) {
-  .page-title { font-size: 20px; }
   .stat-card { padding: 14px 10px; border-radius: 12px; }
   .stat-value { font-size: 22px; }
   .stat-icon-bg { width: 36px; height: 36px; border-radius: 8px; margin-bottom: 8px; }

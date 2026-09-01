@@ -105,12 +105,27 @@ export function deleteUser(id) {
   return request.delete(`/admin/users/${id}`)
 }
 
-export function resetUserPassword(id) {
-  return request.put(`/admin/users/${id}/reset-password`)
+export function resetUserPassword(id, newPassword) {
+  return request.put(`/admin/users/${id}/reset-password`, { newPassword })
+}
+
+export function updateUserRole(id, role) {
+  return request.put(`/admin/users/${id}/role`, { role })
 }
 
 export function verifyUsers(userIds, action) {
   return request.put('/admin/users/verify', { userIds, action })
+}
+
+// === 表格导出（Excel） ===
+export function exportUsers() {
+  return request.get('/admin/export/users', { responseType: 'blob' })
+}
+export function exportProducts() {
+  return request.get('/admin/export/products', { responseType: 'blob' })
+}
+export function exportOrders() {
+  return request.get('/admin/export/orders', { responseType: 'blob' })
 }
 
 // === 商品管理 ===

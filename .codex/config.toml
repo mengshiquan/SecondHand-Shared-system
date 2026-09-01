@@ -1,8 +1,0 @@
-[mcp_servers.playwright]
-command = "cmd"
-args = [
-    "/c",
-    "npx",
-    "-y",
-    "@playwright/mcp",
-]

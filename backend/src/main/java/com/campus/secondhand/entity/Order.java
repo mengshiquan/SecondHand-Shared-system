@@ -64,8 +64,14 @@ public class Order {
     /** 退款申请时间 */
     private LocalDateTime refundTime;
 
-    /** 付款时间（预留模拟支付） */
+    /** 付款时间 */
     private LocalDateTime paymentTime;
+
+    /** 支付渠道：ALIPAY-支付宝沙箱 WECHAT-微信模拟 */
+    private String payChannel;
+
+    /** 第三方支付交易号 */
+    private String payTradeNo;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

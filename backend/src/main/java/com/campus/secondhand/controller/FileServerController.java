@@ -1,5 +1,6 @@
 package com.campus.secondhand.controller;
 
+import com.campus.secondhand.util.FileUploadUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,10 +34,9 @@ public class FileServerController {
      */
     @PostConstruct
     public void init() {
-        File dir = new File(uploadPath);
-        if (!dir.isAbsolute()) {
-            uploadPath = dir.getAbsolutePath() + File.separator;
-        }
+        // 复用统一解析逻辑，兼容从项目根目录启动的场景（自动回退到 backend/uploads）
+        File dir = FileUploadUtil.resolveUploadDir(uploadPath);
+        uploadPath = dir.getAbsolutePath() + File.separator;
         log.info("【文件服务】上传目录已解析为: {}", uploadPath);
         // 确保目录存在
         if (!dir.exists()) {

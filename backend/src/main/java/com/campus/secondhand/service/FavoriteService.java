@@ -9,6 +9,9 @@ public interface FavoriteService extends IService<Favorite> {
 
     void toggle(Long productId);
 
+    /** 确保已收藏（幂等，不会取消收藏） */
+    void ensureFavorite(Long productId);
+
     boolean isFavorited(Long productId);
 
     void removeBatch(java.util.List<Long> productIds);

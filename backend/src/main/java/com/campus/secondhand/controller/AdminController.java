@@ -62,13 +62,16 @@ public class AdminController {
         return Result.success();
     }
 
-    /** 商品管理列表 */
+    /** 商品管理列表：默认全部，支持按分类/状态筛选 */
     @GetMapping("/products")
     public Result<IPage<ProductVO>> products(
             @RequestParam(defaultValue = "1") Integer pageNum,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String keyword) {
-        return Result.success(adminService.productPage(pageNum, pageSize, keyword));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long parentCategoryId,
+            @RequestParam(required = false) String status) {
+        return Result.success(adminService.productPage(pageNum, pageSize, keyword, categoryId, parentCategoryId, status));
     }
 
     /** 订单管理列表 */
@@ -269,8 +272,15 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/reset-password")
-    public Result<Void> resetPassword(@PathVariable Long id) {
-        adminService.resetUserPassword(id);
+    public Result<String> resetPassword(@PathVariable Long id, @RequestBody(required = false) Map<String, String> params) {
+        String newPassword = params != null ? params.get("newPassword") : null;
+        return Result.success(adminService.resetUserPassword(id, newPassword));
+    }
+
+    /** 调整用户角色（仅超管）：将普通用户设为管理员或取消管理员 */
+    @PutMapping("/users/{id}/role")
+    public Result<Void> updateUserRole(@PathVariable Long id, @RequestBody Map<String, String> params) {
+        adminService.updateUserRole(id, params.get("role"));
         return Result.success();
     }
 }

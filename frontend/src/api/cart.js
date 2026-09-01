@@ -16,6 +16,10 @@ export function removeBatchFromCart(ids) {
   return request.delete('/cart/batch', { data: { ids } })
 }
 
+export function moveToFavorite(ids) {
+  return request.post('/cart/move-to-favorite', { ids })
+}
+
 export function clearCart() {
   return request.delete('/cart/clear')
 }

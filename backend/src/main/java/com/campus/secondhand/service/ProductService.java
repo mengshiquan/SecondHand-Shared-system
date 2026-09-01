@@ -12,6 +12,9 @@ public interface ProductService extends IService<Product> {
     /** 主动失效商品详情缓存（供绕过 updateById 的直更路径调用） */
     void evictDetailCache(Long productId);
 
+    /** 买家咨询卖家：以通知形式送达卖家 */
+    void contactSeller(Long productId, String message);
+
     void publish(ProductDTO dto);
 
     void updateProduct(ProductDTO dto);

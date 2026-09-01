@@ -1,9 +1,10 @@
 <template>
   <div class="login-page">
+    <AuthBackground />
     <div class="left-section">
       <div class="logo-section">
         <a href="/" class="logo-link">
-          <span>校园二手共享平台</span>
+          <img src="/logo-vertical.png" alt="校园物品" class="logo-vertical-img">
         </a>
       </div>
 
@@ -13,23 +14,19 @@
       </div>
 
       <div class="footer-links">
-        <a href="/privacy-policy" class="footer-link">Privacy Policy</a>
-        <a href="/terms" class="footer-link">Terms of Service</a>
+        <a href="https://www.asu.edu.cn/" target="_blank" rel="noopener" class="footer-link">安顺学院</a>
+        <a href="/" class="footer-link">校园二手平台</a>
       </div>
-
-      <div class="grid-overlay"></div>
-      <div class="blur-circle blur-circle-1"></div>
-      <div class="blur-circle blur-circle-2"></div>
     </div>
 
     <div class="right-section">
       <div class="form-wrapper">
         <div class="mobile-logo">
-          <span>校园二手共享平台</span>
+          <img src="/logo-horizontal.png" alt="校园物品" class="mobile-logo-img">
         </div>
 
         <div class="auth-header">
-          <el-icon :size="40" color="#10B981"><Shop /></el-icon>
+          <img src="/logo-horizontal.png" alt="校园物品" class="auth-logo">
           <h2>欢迎回来</h2>
           <p>登录你的账号，发现校园好物</p>
         </div>
@@ -40,6 +37,12 @@
           </el-form-item>
           <el-form-item prop="password">
             <el-input v-model="form.password" type="password" placeholder="密码" prefix-icon="Lock" size="large" show-password @visible-change="showPassword = $event" @focus="isTyping = true" @blur="isTyping = false" />
+          </el-form-item>
+          <el-form-item prop="captchaCode">
+            <div class="captcha-row">
+              <el-input v-model="form.captchaCode" placeholder="验证码" prefix-icon="Key" size="large" maxlength="4" @keyup.enter="handleLogin" />
+              <img :src="captchaImg" class="captcha-img" title="点击刷新验证码" @click="refreshCaptcha">
+            </div>
           </el-form-item>
           
           <el-form-item>
@@ -65,40 +68,65 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import AnimatedCharacters from '@/components/AnimatedCharacters.vue'
+import AuthBackground from '@/components/AuthBackground.vue'
+import { getCaptcha } from '@/api/user'
 
 
+/**
+ * 登录页：左侧品牌插画 + 右侧登录表单（验证码、记住我、动画角色反馈）
+ */
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-const formRef = ref()
-const loading = ref(false)
-const rememberMe = ref(false)
-const showPassword = ref(false)
-const isTyping = ref(false)
-const loginFailed = ref(false)
-const loginSuccess = ref(false)
+const formRef = ref()                 // 表单引用
+const loading = ref(false)            // 登录提交中
+const rememberMe = ref(true)          // 是否 30 天记住登录
+const showPassword = ref(false)       // 密码是否明文展示（控制动画）
+const isTyping = ref(false)           // 是否正在输入（控制动画）
+const loginFailed = ref(false)        // 登录失败动画触发
+const loginSuccess = ref(false)       // 登录成功动画触发
 const form = reactive({
   username: '',
-  password: ''
+  password: '',
+  captchaKey: '',
+  captchaCode: ''
 })
 
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
 }
 
+const captchaImg = ref('')
+/**
+ * 刷新图形验证码并清空已输入的验证码
+ */
+async function refreshCaptcha() {
+  try {
+    const res = await getCaptcha()
+    captchaImg.value = res.data.image
+    form.captchaKey = res.data.key
+    form.captchaCode = ''
+  } catch { /* 验证码加载失败时登录提交会提示 */ }
+}
+onMounted(refreshCaptcha)
+
+/**
+ * 登录提交：校验表单 → 调用登录 → 成功延迟跳转首页/redirect，失败刷新验证码
+ */
 async function handleLogin() {
   await formRef.value.validate()
   loading.value = true
   loginFailed.value = false
   loginSuccess.value = false
   try {
-    await userStore.login({ ...form })
+    await userStore.login({ ...form }, rememberMe.value)
     loginSuccess.value = true
     ElMessage.success('登录成功')
     setTimeout(() => {
@@ -106,6 +134,7 @@ async function handleLogin() {
     }, 1000)
   } catch (error) {
     loginFailed.value = true
+    refreshCaptcha()
     setTimeout(() => {
       loginFailed.value = false
     }, 3000)
@@ -129,24 +158,28 @@ async function handleLogin() {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: linear-gradient(160deg, #064E3B 0%, #047857 30%, #059669 60%, #10B981 100%);
   padding: 3rem;
-  color: white;
+  color: var(--sh-ink);
 }
 
 .logo-section {
   position: relative;
-  z-index: 20;
 }
 
 .logo-link {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 1.125rem;
   font-weight: 600;
   text-decoration: none;
   color: inherit;
+}
+
+.logo-vertical-img {
+  height: 168px;
+  width: auto;
+  display: block;
 }
 
 .characters-section {
@@ -161,45 +194,22 @@ async function handleLogin() {
 .footer-links {
   position: relative; z-index: 20;
   display: flex; align-items: center; gap: 2rem;
-  font-size: 0.875rem; color: rgba(255,255,255,0.6);
+  font-size: 0.875rem; color: var(--sh-muted);
 }
 .footer-link { color: inherit; text-decoration: none; transition: color 0.2s; }
-.footer-link:hover { color: #fff; }
-
-.grid-overlay {
-  position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.blur-circle {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(96px);
-}
-
-.blur-circle-1 {
-  top: 20%; right: 20%;
-  width: 18rem; height: 18rem;
-  background: rgba(16, 185, 129, 0.15);
-}
-.blur-circle-2 {
-  bottom: 20%; left: 20%;
-  width: 26rem; height: 26rem;
-  background: rgba(5, 150, 105, 0.12);
-}
+.footer-link:hover { color: var(--sh-primary-deep); }
 
 .right-section {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  background: linear-gradient(to bottom, #ffffff, #F0FDF4);
 }
 
 .form-wrapper {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 400px;
   padding: 36px 32px;
@@ -218,6 +228,35 @@ async function handleLogin() {
   margin-bottom: 3rem;
 }
 
+.mobile-logo-img {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+
+.auth-logo {
+  height: 46px;
+  width: auto;
+  margin: 0 auto 6px;
+  display: block;
+}
+
+/* ---- 验证码 ---- */
+.captcha-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.captcha-img {
+  height: 40px;
+  flex: none;
+  border-radius: 8px;
+  border: 1px solid var(--sh-line);
+  cursor: pointer;
+  background: #fff;
+}
+
 .auth-header {
   text-align: center;
   margin-bottom: 28px;
@@ -225,7 +264,19 @@ async function handleLogin() {
 .auth-header h2 {
   margin: 10px 0 6px;
   font-size: 24px; font-weight: 700;
-  color: #1F2937;
+  color: var(--sh-ink);
+  position: relative;
+  display: inline-block;
+}
+/* 三色马克笔下划线：绿/橙/靖蓝，呼应背景涂鸦笔色 */
+.auth-header h2::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -8px;
+  width: 56px; height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--sh-primary) 0 34%, var(--sh-accent) 34% 67%, #6366F1 67% 100%);
 }
 
 .auth-header p {

@@ -29,6 +29,10 @@ public class ComplaintController {
         if (target == null) throw new BusinessException("目标用户不存在");
         // 不能投诉自己
         if (target.getId().equals(reporterId)) throw new BusinessException("不能投诉自己");
+        // 管理员是平台 staff，其发布行为由超管监督，不开放用户投诉
+        if ("ADMIN".equals(target.getRole()) || "SUPER_ADMIN".equals(target.getRole())) {
+            throw new BusinessException("不能投诉管理员账号");
+        }
         // 同一用户对同一目标只能有一条待处理投诉
         long existing = complaintMapper.selectCount(new LambdaQueryWrapper<Complaint>()
                 .eq(Complaint::getReporterId, reporterId)

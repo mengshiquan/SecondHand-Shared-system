@@ -29,14 +29,30 @@ public class FileUploadUtil {
     private String uploadPath;
 
     /**
+     * 解析上传目录。若配置目录不存在或为空，且工作目录下存在非空的 backend/uploads
+     * （说明后端从项目根目录而非 backend/ 目录启动），自动回退到该目录，
+     * 避免启动位置不同导致已上传图片无法访问。
+     */
+    public static File resolveUploadDir(String configuredPath) {
+        File dir = new File(configuredPath).getAbsoluteFile();
+        boolean empty = !dir.isDirectory() || dir.list() == null || dir.list().length == 0;
+        if (empty) {
+            File backendDir = new File(dir.getParentFile(), "backend" + File.separator + "uploads");
+            if (backendDir.isDirectory() && backendDir.list() != null && backendDir.list().length > 0) {
+                log.warn("【文件服务】配置上传目录为空，回退到已有文件的目录: {}", backendDir.getAbsolutePath());
+                return backendDir;
+            }
+        }
+        return dir;
+    }
+
+    /**
      * 启动时解析上传路径为绝对路径，确保路径稳定
      */
     @PostConstruct
     public void init() {
-        File dir = new File(uploadPath);
-        if (!dir.isAbsolute()) {
-            uploadPath = dir.getAbsolutePath() + File.separator;
-        }
+        File dir = resolveUploadDir(uploadPath);
+        uploadPath = dir.getAbsolutePath() + File.separator;
         log.info("【文件上传】上传目录已解析为: {}", uploadPath);
     }
 

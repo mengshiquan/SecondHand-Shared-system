@@ -36,17 +36,16 @@ public class OrderController {
         return Result.success(orderService.pageList(pageNum, pageSize, status));
     }
 
+    /** 当前用户订单状态计数（待付款/已付款/已发货），用于角标提醒 */
+    @GetMapping("/status-counts")
+    public Result<Map<String, Long>> statusCounts() {
+        return Result.success(orderService.statusCounts());
+    }
+
     /** 订单详情 */
     @GetMapping("/{id}")
     public Result<OrderVO> detail(@PathVariable Long id) {
         return Result.success(orderService.detail(id));
-    }
-
-    /** 买家付款 */
-    @PutMapping("/{id}/pay")
-    public Result<Void> pay(@PathVariable Long id) {
-        orderService.payOrder(id);
-        return Result.success();
     }
 
     /** 更新订单状态（发货、收货、取消） */

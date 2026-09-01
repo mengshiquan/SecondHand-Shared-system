@@ -1,13 +1,71 @@
+/* ==========================================================
+   设计 token —— 校园二手共享平台视觉系统（松绿×薄荷纸）
+   色彩语义：翠绿（交易/信任）、深松墨绿（标题锚色）、暖橙（价格/行动）
+   中性色全部染绿调，远离 Tailwind 默认灰，避免模板感
+   ========================================================== */
+:root {
+  /* --- 品牌色 --- */
+  --sh-primary: #10B981;
+  --sh-primary-deep: #059669;
+  --sh-pine: #15463A;
+  --sh-accent: #F59E0B;
+
+  /* --- 文字（绿调墨色阶） --- */
+  --sh-ink: #1D2B26;
+  --sh-ink-soft: #3C4E47;
+  --sh-muted: #64756F;
+  --sh-faint: #9BAAA4;
+
+  /* --- 背景与边线 --- */
+  --sh-bg: #F0F9F4;
+  --sh-surface: #FFFFFF;
+  --sh-line: #DDE8E1;
+  --sh-line-soft: #EAF1EC;
+
+  /* --- 字号字阶 --- */
+  --sh-size-xs: 12px;
+  --sh-size-sm: 13px;
+  --sh-size-base: 15px;
+  --sh-size-md: 16px;
+  --sh-size-lg: 20px;
+  --sh-size-xl: 24px;
+  --sh-size-2xl: 28px;
+
+  /* --- 分层阴影（带薄荷绿调，"温室光照"质感） --- */
+  --sh-shadow-sm: 0 1px 2px rgba(16, 185, 129, 0.05), 0 1px 6px rgba(29, 43, 38, 0.04);
+  --sh-shadow-md: 0 4px 14px rgba(16, 185, 129, 0.08), 0 2px 6px rgba(29, 43, 38, 0.04);
+  --sh-shadow-lg: 0 12px 28px rgba(16, 185, 129, 0.13), 0 4px 10px rgba(29, 43, 38, 0.05);
+
+  /* --- 圆角 --- */
+  --sh-radius-sm: 6px;
+  --sh-radius-md: 10px;
+  --sh-radius-lg: 16px;
+
+  /* --- 动效（全站共享一条"轻拿轻放"曲线） --- */
+  --sh-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --sh-dur-fast: 0.18s;
+  --sh-dur: 0.25s;
+
+  /* --- 字体（不依赖 webfont，答辩/离线环境稳定） --- */
+  --sh-font: 'PingFang SC', 'HarmonyOS Sans SC', 'Microsoft YaHei', 'Hiragino Sans GB', system-ui, -apple-system, sans-serif;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif;
-  background: #F0F9F4;
-  color: #1F2937;
+  font-family: var(--sh-font);
+  background: var(--sh-bg);
+  color: var(--sh-ink);
+  line-height: 1.5;
+  font-feature-settings: 'palt';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -15,6 +73,32 @@ body {
 a {
   text-decoration: none;
   color: inherit;
+}
+
+/* 文字选中色：薄荷底 + 深绿字 */
+::selection {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+/* ========== 滚动条（细、染色，不抢内容） ========== */
+html {
+  scrollbar-color: #A7F3D0 transparent;
+  scrollbar-width: thin;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #A7F3D0;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6EE7B7;
 }
 
 /* ========== Element Plus 主题色覆盖 ========== */
@@ -29,15 +113,43 @@ a {
   --el-color-success: #10B981;
   --el-color-warning: #F59E0B;
   --el-color-danger: #EF4444;
-  --el-color-info: #6B7280;
+  --el-color-info: #64756F;
+  /* 文字/边框/填充接入绿调色阶：输入框、表格、弹窗、标签页全站受益 */
+  --el-text-color-primary: #1D2B26;
+  --el-text-color-regular: #3C4E47;
+  --el-text-color-secondary: #64756F;
+  --el-text-color-placeholder: #9BAAA4;
+  --el-border-color: #C9D9D0;
+  --el-border-color-light: #DDE8E1;
+  --el-border-color-lighter: #E7F0EA;
+  --el-border-color-extra-light: #F0F6F2;
+  --el-fill-color: #EDF5F0;
+  --el-fill-color-light: #F2F8F4;
+  --el-fill-color-lighter: #F7FBF8;
+  --el-fill-color-blank: #FFFFFF;
+  --el-mask-color: rgba(21, 70, 58, 0.5);
   --el-border-radius-base: 8px;
   --el-font-size-base: 15px;
+  --el-font-family: var(--sh-font);
   --el-menu-hover-bg-color: #ECFDF5;
+  --el-box-shadow: var(--sh-shadow-md);
+  --el-box-shadow-light: var(--sh-shadow-sm);
 
   /* 响应式断点 */
   --breakpoint-sm: 480px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
+}
+
+/* 主按钮按下时的轻微回弹，呼应"轻拿轻放" */
+.el-button {
+  transition: transform var(--sh-dur-fast) var(--sh-ease),
+    background-color var(--sh-dur-fast) var(--sh-ease),
+    border-color var(--sh-dur-fast) var(--sh-ease),
+    box-shadow var(--sh-dur-fast) var(--sh-ease);
+}
+.el-button:active {
+  transform: scale(0.97);
 }
 
 /* ========== 布局 ========== */
@@ -57,25 +169,70 @@ a {
 
 /* ========== 卡片悬浮 ========== */
 .card-hover {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform var(--sh-dur) var(--sh-ease), box-shadow var(--sh-dur) var(--sh-ease);
 }
 
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.12);
+  box-shadow: var(--sh-shadow-lg);
+}
+
+/* ========== 页面切换动效（布局不变，只做柔和入场） ========== */
+.page-fade-enter-active {
+  transition: opacity 0.22s var(--sh-ease), transform 0.22s var(--sh-ease);
+}
+.page-fade-leave-active {
+  transition: opacity 0.12s ease-in;
+}
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+.page-fade-leave-to {
+  opacity: 0;
 }
 
 /* ========== 排版工具类 ========== */
 .text-price {
-  font-family: 'Inter', 'PingFang SC', sans-serif;
+  font-family: var(--sh-font);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: #F59E0B;
+  letter-spacing: -0.01em;
+  color: var(--sh-accent);
 }
 
 .text-muted {
-  color: #6B7280;
+  color: var(--sh-muted);
   font-size: 13px;
+}
+
+/* ========== 页头（全站统一：标题带翠绿眉条，如图书馆导览牌） ========== */
+.page-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--sh-pine);
+  letter-spacing: -0.01em;
+  margin: 0 0 4px;
+  display: flex;
+  align-items: center;
+}
+.page-title::before {
+  content: '';
+  width: 5px;
+  height: 0.92em;
+  border-radius: 3px;
+  /* 顶部 3px 暖橙高亮 + 松绿主体：像价签标记，全站统一信号 */
+  background: linear-gradient(180deg, var(--sh-accent) 0px, var(--sh-accent) 3px, var(--sh-primary) 3px, var(--sh-primary-deep) 100%);
+  margin-right: 10px;
+  flex: none;
+}
+.page-sub {
+  font-size: 14px;
+  color: var(--sh-faint);
+  margin: 0;
+}
+@media (max-width: 768px) {
+  .page-title { font-size: 20px; }
 }
 
 /* ========== 响应式工具类 ========== */
@@ -92,7 +249,24 @@ a {
 
 /* ========== 焦点可见性 (可访问性) ========== */
 :focus-visible {
-  outline: 2px solid #10B981;
+  outline: 2px solid var(--sh-primary);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* ========== 动效克制（尊重系统"减少动态效果"设置） ========== */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .card-hover:hover {
+    transform: none;
+  }
 }

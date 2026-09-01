@@ -51,9 +51,9 @@ jwt:
   secret: ${JWT_SECRET:campus-secondhand-jwt-secret-key-2024-very-long-string}
   expiration: 86400000
 
-# CORS 配置：仅允许白名单内的源携带凭证访问
+# CORS 配置：默认允许任意源（局域网/内网穿透访问），生产用环境变量收紧为精确域名
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
 
 # 文件上传配置
 # ⚠️ 该路径为相对路径，解析依赖于 JVM 工作目录（working directory）
@@ -62,3 +62,14 @@ cors:
 # 启动日志会输出实际解析后的绝对路径，可用于调试
 file:
   upload-path: ./uploads/
+
+# 支付配置（支付宝沙箱）
+# 凭据从支付宝开放平台沙箱控制台领取：https://open.alipay.com/develop/sandbox/app
+# 三个值留空 = 未配置，前端支付宝选项提示不可用，微信模拟支付不受影响
+pay:
+  alipay:
+    app-id: ${ALIPAY_APP_ID:9021000167647999}
+    private-key: ${ALIPAY_PRIVATE_KEY:MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQC6wnw2tdqfNCFrWKWtbQzKkh+iJljs7INj6Vv9nD87bNbATRmfWqJ5S9OsQVxEukCIBnmOaGQpQNemqFBfuInQGvnOceXVbdhvOsrZhpPoaSx/Xt2Nz+w39aJjY0W7lQ7bsm5wPEPuNOoy5FWGb7b8Xo2P5B2dCW2in/z/+ym92xYTDt7bMCNfKfpJEwLxqBu8LFAck8DuQsSxMkVwUGfLMDyfkIePDUK8rr+IckXBIZKwNokAzJng/H6qqGk3H6+nVuwPjKS8aTTVxPY7ku+/NbkwwVb37ZPm1kP+KKEPasYFH8KMKAXcWNU4auJPvhb8vC1PP3j59he6tjvfRfLfAgMBAAECggEBAJfeQT4IIZCmxqpROuDNNcKgksK75kI7jhi4EgsofK7pMbTMvZI9FLQIOkfwGoT05Db49O4d6500Umj+o+VC3iZxWURMkHY/TeodaAj9i9dJd1rYHNgOBWv3/iZN+s2wR5XWAkKYbzEMrInX7chVnfqZNQqWmJIzsYi2CvlqF6Z/VylEAU6kVVyrggNJMyaxE4YLYTfEm8pFP+kQHuvseEeypEwcfqUSi6DIC5QAc8CV7MlCGtY6PKfkrwbSQQrzdRA7KtmdKwRJLoOzsB83GweAT393+jlEOIVA253gWUeioegVmyNgaliirnSBR+8ONbwnbCtl5RUAcoBWmt+2IAkCgYEA4Y6gzEjvCcG4rt1QxnpOZacy8HE2364Mp3HREM0wE00BvcVBJe0cn/aWOjiS/hN1X+28uVcNzEaiFkxLb1YUd2N38tZ/+Vuw3oGZ8n7P0+Kiz5UB6Pw4NAb7865bWvfDp7klt4W9Iz1r+o5He3EKxa7uoGJRzpHcTejtGTfPT9UCgYEA0/dXd/y/bQyeU0zE/JBiyMbvTJph/3Tm+TlACCQVLgn8py4yaW5S9AaTlo1QuA3t7LKjhoV3yqXouHKSGtweIbHAw1nlinOXs8nwDj+HxLTWKw8XHxUX82ziuH++BYHz68h8A441cPxewekcQbjI4dHIMCYk5ns7JufByiLXBeMCgYEApo9XSGNXOSI3idFeU6J/f+tO32UK+3QgXgnbM4gBx07nSUZ/TE1jBPDnkIi0azDdTQBWi5qwUreZ+9NNJSMwq9Tk/4rMJ8xAuJ6Fmx9vwuyqA5XqOiz+J9U8en63cV5iudkr8/CrcXlq4jPsr0gTh1UdW4wfEuZ9A39MjoG68h0CgYB3Uqzlud2VKN5T7EqUFz/U4NBDYkE6inef4s+eBZn6sdqNzl7IpTeDcdRRkznWctj2P1X421elN6J7etuuzS0VMLhgAFJMj2fd6Rb/HlpyrI5H7RXKBJjYCvrSe+7fsNk8aT8OzVZeRWOea3jhsoE7RloYaNCrAsI404xvGw/KmwKBgQCmbVP0q2guAh7onfE4nHBD5Mij5ha0OxsMc4yJJNeoav9h5t+/EQsnmAfyc2XS6c6E3kQnH/Xv6txBiUZKhBdw9JNv1UCkQk368iu1aNrARWjGYzSYeJ5SlGBBTYqlGb5gqVgMC9nIBMzc6Ar/w6lAWGlNcaBBqQKXcMQREh3gsQ==}
+    alipay-public-key: ${ALIPAY_PUBLIC_KEY:MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj0HSAiFUzJjXDQOZ+rYU1hFnLyXc4ih82m//88LBS4jr17HJI8RRP9ptrAoxXaIHLCrDoxYgGxCCK37qqBMf6tLM3/euXpQ9y/jS2n73bE29qhpPXVmfJ2hYrxorIbgk+UYA8WjMf3J9/Pq2Z0vPxG7NHSXEN31rHoZHCGiN5oUtyJx3sW8yqwNY6ZuPHDCNO6jIKYCFHAQ7CbNqq3OgPIfaT+rNzhmS5d9XdyeTmYTCLda2lQ15pXzX8IWXmFI0IsxoX3uXnykFpoP+GToaS4JoJnHPDgAGw5O/csKrgV6LJfwrVCs7nnkzUDbUomg/ZXYf49YC+css9CA01JAcxwIDAQAB}
+    gateway: ${ALIPAY_GATEWAY:https://openapi-sandbox.dl.alipaydev.com/gateway.do}
+    notify-url: ${ALIPAY_NOTIFY_URL:http://localhost:8080/api/pay/alipay/notify}

@@ -23,6 +23,14 @@
         <span>{{ product.sellerName || '匿名' }}</span>
         <span>{{ product.categoryName }}</span>
       </div>
+      <button
+        v-if="product.status === 'ON_SALE'"
+        class="cart-btn"
+        title="加入购物车"
+        @click.stop="handleAddCart"
+      >
+        <el-icon :size="15"><ShoppingCart /></el-icon>
+      </button>
     </div>
   </el-card>
 </template>
@@ -30,13 +38,17 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Picture } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { Picture, ShoppingCart } from '@element-plus/icons-vue'
+import { addToCart } from '@/api/cart'
+import { useUserStore } from '@/stores/user'
 
 const props = defineProps({
   product: { type: Object, required: true }
 })
 
 const router = useRouter()
+const userStore = useUserStore()
 
 const coverImage = computed(() => {
   const images = props.product.images
@@ -51,6 +63,14 @@ const statusText = computed(() => {
 
 function goDetail() {
   router.push(`/product/${props.product.id}`)
+}
+
+async function handleAddCart() {
+  if (!userStore.isLoggedIn) { router.push('/login'); return }
+  try {
+    await addToCart(props.product.id)
+    ElMessage.success('已加入购物车')
+  } catch { /* request.js 已统一提示错误 */ }
 }
 </script>
 
@@ -116,6 +136,7 @@ function goDetail() {
 }
 
 .info {
+  position: relative;
   padding: 12px 16px 16px;
 }
 
@@ -141,6 +162,31 @@ function goDetail() {
   justify-content: space-between;
   font-size: 12px;
   color: #909399;
+  padding-right: 30px;
+}
+
+/* 加购按钮 */
+.cart-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: #ECFDF5;
+  color: #059669;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.cart-btn:hover {
+  background: #10B981;
+  color: #fff;
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(16,185,129,0.35);
 }
 
 /* 响应式：卡片尺寸跟随网格 */

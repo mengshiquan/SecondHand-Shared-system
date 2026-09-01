@@ -1,63 +1,114 @@
 <template>
   <div class="home">
-    <!-- 微横幅：数据驱动 -->
-    <section class="micro-banner">
-      <div class="banner-bg"></div>
-      <div class="banner-dots"></div>
-      <div class="banner-inner">
-        <div class="banner-left">
-          <p class="banner-greeting">{{ greeting }}</p>
-          <h1>发现校园好物</h1>
-          <p class="banner-sub">让闲置在校园里流动起来</p>
+    <!-- 待办提醒条：订单状态与未读消息标红提醒，处理后自动消失 -->
+    <section v-if="showReminders" class="reminder-bar">
+      <span class="reminder-title">
+        <el-icon><Bell /></el-icon>待办提醒
+      </span>
+      <div class="reminder-chips">
+        <div v-if="orderCounts.BUYER_PENDING" class="reminder-chip" @click="router.push({ path: '/orders', query: { tab: 'PENDING' } })">
+          待付款 <span class="chip-badge">{{ orderCounts.BUYER_PENDING }}</span>
         </div>
-        <div class="banner-stats">
-          <div class="stat-chip">
-            <span class="stat-num">{{ products.length }}</span>
-            <span class="stat-label">件在售</span>
-          </div>
-          <div class="stat-chip">
-            <span class="stat-num">{{ categories.length }}</span>
-            <span class="stat-label">个分类</span>
-          </div>
+        <div v-if="orderCounts.SELLER_PAID" class="reminder-chip" @click="router.push({ path: '/orders', query: { tab: 'PAID' } })">
+          待发货 <span class="chip-badge">{{ orderCounts.SELLER_PAID }}</span>
+        </div>
+        <div v-if="orderCounts.BUYER_SHIPPED" class="reminder-chip" @click="router.push({ path: '/orders', query: { tab: 'SHIPPED' } })">
+          待收货 <span class="chip-badge">{{ orderCounts.BUYER_SHIPPED }}</span>
+        </div>
+        <div v-if="orderCounts.SELLER_REFUND" class="reminder-chip" @click="router.push({ path: '/orders', query: { tab: 'REFUND' } })">
+          退款待处理 <span class="chip-badge">{{ orderCounts.SELLER_REFUND }}</span>
+        </div>
+        <div v-if="unreadCount" class="reminder-chip" @click="router.push('/notifications')">
+          未读消息 <span class="chip-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
         </div>
       </div>
     </section>
 
-    <!-- 分类卡片网格 -->
-    <section class="category-section">
-      <h2 class="section-label">
-        <span class="label-line"></span>
-        <span>逛逛分类</span>
-        <span class="label-line"></span>
-      </h2>
-      <div class="category-grid">
-        <div
-          v-for="(cat, i) in categories"
-          :key="cat.id"
-          class="category-card"
-          :class="getCardColor(i)"
-          :style="{ animationDelay: `${i * 0.06}s` }"
-          @click="router.push({ path: '/products', query: { categoryId: cat.id } })"
-        >
-          <div class="card-bg-glow"></div>
-          <div class="card-emoji">{{ getCatEmoji(cat.name) }}</div>
-          <span class="card-name">{{ cat.name }}</span>
-          <span class="card-count">{{ cat.children?.length || 0 }} 个子类</span>
+    <!-- 问候条 -->
+    <div class="hero-topbar">
+      <span class="greeting">{{ greeting }}</span>
+      <span class="topbar-stats">{{ total }} 件在售 · {{ categories.length }} 个分类</span>
+    </div>
+
+    <!-- 三栏主视觉：左分类侧栏 + 中轮播图 + 右快捷入口（借鉴淘宝首页布局） -->
+    <section class="home-hero">
+      <!-- 左：分类侧栏，悬停弹出子类 -->
+      <aside class="cat-sidebar">
+        <div class="cat-side-head">分类</div>
+        <div class="cat-side-list">
+          <el-popover
+            v-for="cat in categories"
+            :key="cat.id"
+            trigger="hover"
+            placement="right-start"
+            :width="300"
+            :offset="6"
+            :disabled="!(cat.children?.length)"
+            popper-class="cat-sub-popover"
+          >
+            <template #reference>
+              <div
+                class="cat-side-item"
+                @click="router.push({ path: '/products', query: { parentCategoryId: cat.id } })"
+              >
+                <span class="side-emoji">{{ getCatEmoji(cat.name) }}</span>
+                <span class="side-name">{{ cat.name }}</span>
+                <el-icon :size="12" class="side-arrow"><ArrowRight /></el-icon>
+              </div>
+            </template>
+            <div class="sub-head">{{ cat.name }} · 子类</div>
+            <div class="sub-items">
+              <span
+                v-for="sub in cat.children"
+                :key="sub.id"
+                class="sub-item"
+                @click="router.push({ path: '/products', query: { categoryId: sub.id } })"
+              >{{ sub.name }}</span>
+            </div>
+          </el-popover>
         </div>
-        <!-- 发布入口卡片 -->
-        <div
-          class="category-card publish-entry"
-          :style="{ animationDelay: `${categories.length * 0.06}s` }"
-          @click="router.push('/publish')"
-        >
-          <div class="publish-ripple"></div>
-          <div class="card-emoji publish-emoji">
-            <el-icon :size="22"><Plus /></el-icon>
-          </div>
-          <span class="card-name">发布闲置</span>
-          <span class="card-count">快速出手</span>
-        </div>
+      </aside>
+
+      <!-- 中：轮播图 -->
+      <div class="hero-carousel">
+        <el-carousel height="380px" :interval="4500" arrow="hover">
+          <el-carousel-item v-for="(s, i) in slides" :key="i">
+            <div
+              class="slide" :class="s.theme"
+              :style="{ backgroundImage: `linear-gradient(90deg, rgba(15,23,42,0.42), rgba(15,23,42,0.16) 52%, rgba(15,23,42,0) 78%), url(${s.bg})` }"
+              @click="goSlide(s)"
+            >
+              <span class="slide-tag">{{ s.tag }}</span>
+              <h2 class="slide-title">{{ s.title }}</h2>
+              <p class="slide-sub">{{ s.sub }}</p>
+              <span class="slide-btn">{{ s.btn }}</span>
+            </div>
+          </el-carousel-item>
+        </el-carousel>
       </div>
+
+      <!-- 右：快捷入口卡片 -->
+      <aside class="hero-quick">
+        <div class="quick-card quick-green" @click="router.push('/publish')">
+          <span class="quick-title">发布闲置</span>
+          <span class="quick-sub">一键快速出手</span>
+        </div>
+        <div class="quick-card quick-blue" @click="router.push('/orders')">
+          <span class="quick-title">我的订单</span>
+          <span class="quick-sub">{{ todoTotal ? `${todoTotal} 笔待处理` : '查看交易进度' }}</span>
+          <span v-if="todoTotal" class="quick-badge">{{ todoTotal > 99 ? '99+' : todoTotal }}</span>
+        </div>
+        <div class="quick-card quick-amber" @click="router.push('/cart')">
+          <span class="quick-title">购物车</span>
+          <span class="quick-sub">{{ cartCount ? `${cartCount} 件待结算` : '去挑点好物' }}</span>
+          <span v-if="cartCount" class="quick-badge">{{ cartCount > 99 ? '99+' : cartCount }}</span>
+        </div>
+        <div class="quick-card quick-rose" @click="router.push('/notifications')">
+          <span class="quick-title">消息通知</span>
+          <span class="quick-sub">{{ unreadCount ? `${unreadCount} 条未读` : '暂无新消息' }}</span>
+          <span v-if="unreadCount" class="quick-badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+        </div>
+      </aside>
     </section>
 
     <!-- 最新上架商品 -->
@@ -106,16 +157,49 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProductList } from '@/api/product'
-import { getMainCategories } from '@/api/category'
+import { getCategoryTree } from '@/api/category'
+import { getOrderStatusCounts } from '@/api/order'
+import { getUnreadCount } from '@/api/notification'
+import { getCartList } from '@/api/cart'
+import { useUserStore } from '@/stores/user'
 import ProductCard from '@/components/ProductCard.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 
 const router = useRouter()
+const userStore = useUserStore()
 const products = ref([])
 const categories = ref([])
 const loading = ref(false)
 const total = ref(0)
 const feedPage = ref(1)
+
+// 待办提醒：按“谁该行动”拆分的订单计数 + 未读消息 + 购物车数量，处理完成后计数归零自动隐藏
+const orderCounts = ref({})
+const unreadCount = ref(0)
+const cartCount = ref(0)
+// 我的待办总数：买家待付款/待收货 + 卖家待发货/退款待处理
+const todoTotal = computed(() => {
+  const c = orderCounts.value
+  return (c.BUYER_PENDING || 0) + (c.BUYER_SHIPPED || 0) + (c.SELLER_PAID || 0) + (c.SELLER_REFUND || 0)
+})
+const showReminders = computed(() => {
+  if (!userStore.isLoggedIn) return false
+  return todoTotal.value + unreadCount.value > 0
+})
+
+async function loadReminders() {
+  if (!userStore.isLoggedIn) return
+  try {
+    const [ordersRes, unreadRes, cartRes] = await Promise.all([
+      getOrderStatusCounts(),
+      getUnreadCount(),
+      getCartList()
+    ])
+    orderCounts.value = ordersRes.data || {}
+    unreadCount.value = unreadRes.data.count || 0
+    cartCount.value = (cartRes.data || []).length
+  } catch {}
+}
 
 const catEmoji = {
   '数码电子': '📱', '图书教材': '📚', '生活用品': '🏠',
@@ -127,8 +211,54 @@ function getCatEmoji(name) {
   return catEmoji[name] || '📌'
 }
 
-const cardColors = ['card-teal','card-amber','card-blue','card-purple','card-rose','card-indigo','card-cyan']
-function getCardColor(index) { return cardColors[index % cardColors.length] }
+// 轮播图数据：首屏主题 + 前三个一级分类专区 + 发布入口
+const slideThemes = [
+  { theme: 'slide-purple' },
+  { theme: 'slide-blue' },
+  { theme: 'slide-rose' }
+]
+/** 分类轮播插画映射：3D 黏土风背景图 */
+function catBg(name) {
+  if (/数码|电子|手机|电脑/.test(name)) return '/banners/digital.png'
+  if (/图书|教材|书/.test(name)) return '/banners/books.png'
+  return '/banners/life.png'
+}
+const slides = computed(() => {
+  const list = [{
+    tag: '校园二手',
+    title: '发现校园好物',
+    sub: '让闲置在校园里流动起来',
+    btn: '去逛逛',
+    theme: 'slide-green',
+    bg: '/banners/brand.png',
+    to: '/products'
+  }]
+  categories.value.slice(0, 3).forEach((cat, i) => {
+    list.push({
+      tag: cat.name,
+      title: `${cat.name}专区`,
+      sub: `${cat.children?.length || 0} 个子类 · 好物低价别错过`,
+      btn: '去逛逛',
+      theme: slideThemes[i % 3].theme,
+      bg: catBg(cat.name),
+      to: { path: '/products', query: { parentCategoryId: cat.id } }
+    })
+  })
+  list.push({
+    tag: '闲置变现',
+    title: '一键发布闲置',
+    sub: '快速出手，让好物找到新主人',
+    btn: '去发布',
+    theme: 'slide-amber',
+    bg: '/banners/publish.png',
+    to: '/publish'
+  })
+  return list
+})
+
+function goSlide(slide) {
+  router.push(slide.to)
+}
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -149,49 +279,189 @@ async function loadProducts() {
 
 onMounted(async () => {
   try {
-    categories.value = (await getMainCategories()).data
+    // 使用分类树接口，一级分类携带 children，侧栏悬停才能展示子类
+    categories.value = (await getCategoryTree()).data
   } finally { /* ignore */ }
   loadProducts()
+  loadReminders()
 })
 </script>
 
 <style scoped>
-/* ====== 微横幅 ====== */
-.micro-banner {
+/* ====== 待办提醒条（标红提醒，处理后自动隐藏） ====== */
+.reminder-bar {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 14px;
+  padding: 10px 16px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+}
+.reminder-title {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; font-weight: 700; color: #DC2626;
+  white-space: nowrap;
+}
+.reminder-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.reminder-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px;
+  background: #fff; border: 1px solid #FECACA;
+  border-radius: 999px;
+  font-size: 13px; color: #374151;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.reminder-chip:hover { border-color: #EF4444; color: #DC2626; }
+.chip-badge {
+  min-width: 18px; height: 18px; line-height: 18px;
+  border-radius: 9px;
+  background: #EF4444; color: #fff;
+  font-size: 11px; font-weight: 700;
+  text-align: center; padding: 0 5px;
+}
+
+/* ====== 问候条 ====== */
+.hero-topbar {
   position: relative;
+  display: flex; justify-content: flex-end; align-items: center;
+  margin-bottom: 12px;
+}
+.greeting {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-size: 15px; font-weight: 700; color: #1F2937;
+}
+.topbar-stats { font-size: 13px; color: #9CA3AF; }
+
+/* ====== 三栏主视觉 ====== */
+.home-hero {
+  display: grid;
+  grid-template-columns: 210px 1fr 220px;
+  gap: 14px;
   margin-bottom: 32px;
-  border-radius: 20px;
+}
+
+/* ---- 左：分类侧栏 ---- */
+.cat-sidebar {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #F3F4F6;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  display: flex; flex-direction: column;
   overflow: hidden;
-  background: linear-gradient(135deg, #059669 0%, #10B981 40%, #34D399 100%);
-  padding: 32px 36px;
+}
+.cat-side-head {
+  padding: 12px 16px 8px;
+  font-size: 14px; font-weight: 800; color: #1F2937;
+  border-bottom: 1px solid #F3F4F6;
+}
+.cat-side-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  scrollbar-width: thin;
+}
+.cat-side-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cat-side-item:hover { background: #F0FDF4; }
+.cat-side-item:hover .side-name { color: #059669; }
+.cat-side-item:hover .side-arrow { opacity: 1; color: #10B981; }
+.side-emoji { font-size: 15px; }
+.side-name { flex: 1; font-size: 13px; color: #374151; font-weight: 500; }
+.side-arrow { opacity: 0.35; color: #9CA3AF; transition: all 0.15s; }
+
+/* ---- 中：轮播图 ---- */
+.hero-carousel { min-width: 0; border-radius: 14px; overflow: hidden; }
+.hero-carousel :deep(.el-carousel) { border-radius: 14px; }
+.hero-carousel :deep(.el-carousel__indicator .el-carousel__button) {
+  background: #fff; opacity: 0.5;
+}
+.hero-carousel :deep(.el-carousel__indicator.is-active .el-carousel__button) {
+  opacity: 1; background: #10B981;
+}
+.slide {
+  position: relative;
+  height: 100%;
+  padding: 40px 44px;
   color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center right;
 }
-.banner-bg {
+/* 主题色作为插画加载前的兜底背景色 */
+.slide-green  { background-color: #10B981; }
+.slide-purple { background-color: #8B5CF6; }
+.slide-blue   { background-color: #3B82F6; }
+.slide-amber  { background-color: #F59E0B; }
+.slide-rose   { background-color: #F43F5E; }
+.slide::before {
+  content: '';
   position: absolute; inset: 0;
-  background: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.12) 0%, transparent 60%),
-              radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+  background: radial-gradient(circle at 85% 20%, rgba(255,255,255,0.14) 0%, transparent 55%);
 }
-.banner-dots {
-  position: absolute; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.15) 1px, transparent 1px);
-  background-size: 18px 18px;
+.slide-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  backdrop-filter: blur(4px);
 }
-.banner-inner {
-  position: relative; z-index: 1;
-  display: flex; justify-content: space-between; align-items: center;
-  flex-wrap: wrap; gap: 20px;
+.slide-title {
+  margin: 14px 0 6px;
+  font-size: 30px; font-weight: 800; letter-spacing: -0.5px;
+  text-shadow: 0 2px 12px rgba(15,23,42,0.35);
 }
-.banner-greeting { font-size: 14px; opacity: 0.85; margin-bottom: 4px; }
-.banner-left h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
-.banner-sub { font-size: 14px; opacity: 0.8; }
-.banner-stats { display: flex; gap: 16px; }
-.stat-chip {
-  background: rgba(255,255,255,0.18); backdrop-filter: blur(8px);
-  border-radius: 14px; padding: 14px 22px; text-align: center;
-  border: 1px solid rgba(255,255,255,0.2);
+.slide-sub { font-size: 14px; opacity: 0.92; margin: 0 0 20px; text-shadow: 0 1px 8px rgba(15,23,42,0.35); }
+.slide-btn {
+  display: inline-block;
+  padding: 7px 20px;
+  background: #fff;
+  color: #059669;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+  transition: transform 0.2s;
 }
-.stat-num { display: block; font-size: 28px; font-weight: 800; line-height: 1.1; }
-.stat-label { font-size: 12px; opacity: 0.75; }
+.slide:hover .slide-btn { transform: scale(1.05); }
+
+/* ---- 右：快捷入口 ---- */
+.hero-quick {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.quick-card {
+  position: relative;
+  flex: 1;
+  border-radius: 14px;
+  padding: 14px 16px;
+  color: #fff;
+  cursor: pointer;
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.quick-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+.quick-green { background: linear-gradient(135deg, #059669, #34D399); }
+.quick-blue  { background: linear-gradient(135deg, #2563EB, #60A5FA); }
+.quick-amber { background: linear-gradient(135deg, #D97706, #FBBF24); }
+.quick-rose  { background: linear-gradient(135deg, #E11D48, #FB7185); }
+.quick-title { font-size: 15px; font-weight: 800; }
+.quick-sub { font-size: 12px; opacity: 0.85; }
+.quick-badge {
+  position: absolute; top: 10px; right: 12px;
+  min-width: 20px; height: 20px; line-height: 20px;
+  border-radius: 10px;
+  background: #EF4444;
+  border: 2px solid #fff;
+  color: #fff;
+  font-size: 11px; font-weight: 700;
+  text-align: center; padding: 0 5px;
+}
 
 /* ====== 分区标签 ====== */
 .section-label {
@@ -199,137 +469,6 @@ onMounted(async () => {
   font-size: 18px; font-weight: 700; color: #1F2937; margin-bottom: 20px;
 }
 .label-line { flex: 1; height: 1px; max-width: 40px; background: #D1FAE5; }
-
-/* ====== 分类卡片网格 ====== */
-.category-section { margin-bottom: 40px; }
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-}
-
-.category-card {
-  position: relative;
-  display: flex; flex-direction: column; align-items: center;
-  padding: 14px 10px 12px;
-  background: #fff;
-  border-radius: 14px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 8px rgba(0,0,0,0.02);
-  overflow: hidden;
-  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1),
-              border-color 0.3s ease,
-              box-shadow 0.3s ease;
-  animation: cardPopIn 0.5s ease both;
-}
-@keyframes cardPopIn {
-  from { opacity: 0; transform: translateY(16px) scale(0.94); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* 底部光晕：悬停时从中心扩散 */
-.card-bg-glow {
-  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
-  width: 0; height: 4px;
-  border-radius: 50%;
-  opacity: 0;
-  transition: width 0.35s ease, opacity 0.35s ease, box-shadow 0.35s ease;
-}
-.category-card:hover { transform: translateY(-4px); border-color: #D1FAE5; box-shadow: 0 12px 32px rgba(16,185,129,0.1); }
-
-/* ---- 多色卡片主题 ---- */
-.card-teal  .card-emoji { background: #ECFDF5; }
-.card-teal:hover  .card-bg-glow { width: 80%; opacity: 1; box-shadow: 0 0 16px 4px rgba(16,185,129,0.25); background: rgba(16,185,129,0.6); }
-.card-teal:hover  .card-emoji { background: #D1FAE5; }
-
-.card-amber .card-emoji { background: #FFFBEB; }
-.card-amber:hover .card-bg-glow { width: 80%; opacity: 1; box-shadow: 0 0 16px 4px rgba(245,158,11,0.25); background: rgba(245,158,11,0.6); }
-.card-amber:hover .card-emoji { background: #FEF3C7; }
-
-.card-blue  .card-emoji { background: #EFF6FF; }
-.card-blue:hover  .card-bg-glow { width: 80%; opacity: 1; box-shadow: 0 0 16px 4px rgba(59,130,246,0.25); background: rgba(59,130,246,0.6); }
-.card-blue:hover  .card-emoji { background: #DBEAFE; }
-
-.card-purple .card-emoji { background: #F5F3FF; }
-.card-purple:hover .card-bg-glow { width: 80%; opacity: 1; box-shadow: 0 0 16px 4px rgba(139,92,246,0.25); background: rgba(139,92,246,0.6); }
-.card-purple:hover .card-emoji { background: #EDE9FE; }
-
-.card-rose  .card-emoji { background: #FFF1F2; }
-.card-rose:hover  .card-bg-glow { width: 80%; opacity: 1; box-shadow: 0 0 16px 4px rgba(244,63,94,0.25); background: rgba(244,63,94,0.6); }
-.card-rose:hover  .card-emoji { background: #FECDD3; }
-
-.card-indigo .card-emoji { background: #EEF2FF; }
-.card-indigo:hover .card-bg-glow { width: 80%; opacity: 1; box-shadow: 0 0 16px 4px rgba(99,102,241,0.25); background: rgba(99,102,241,0.6); }
-.card-indigo:hover .card-emoji { background: #E0E7FF; }
-
-.card-cyan  .card-emoji { background: #ECFEFF; }
-.card-cyan:hover  .card-bg-glow { width: 80%; opacity: 1; box-shadow: 0 0 16px 4px rgba(6,182,212,0.25); background: rgba(6,182,212,0.6); }
-.card-cyan:hover  .card-emoji { background: #CFFAFE; }
-
-.card-emoji {
-  position: relative; z-index: 1;
-  font-size: 28px;
-  width: 48px; height: 48px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 14px;
-  margin-bottom: 8px;
-  transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), background 0.25s;
-}
-.category-card:hover .card-emoji { transform: scale(1.12) rotate(-3deg); }
-
-.card-name {
-  position: relative; z-index: 1;
-  font-size: 14px; font-weight: 600; color: #374151;
-  margin-bottom: 4px;
-  transition: color 0.2s;
-}
-.card-count {
-  position: relative; z-index: 1;
-  font-size: 11px; color: #9CA3AF;
-  letter-spacing: 0.3px;
-}
-
-/* ---- 发布卡片（独立动效） ---- */
-.publish-entry .card-emoji {
-  background: linear-gradient(135deg, #10B981, #059669);
-  animation: floatEmoji 3s ease-in-out infinite;
-}
-@keyframes floatEmoji {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-.publish-entry:hover .card-emoji { animation: none; transform: scale(1.15); }
-.publish-emoji { color: #fff; }
-
-/* 发布卡片的波纹 */
-.publish-ripple {
-  position: absolute;
-  top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 0; height: 0;
-  border-radius: 50%;
-  background: rgba(16,185,129,0.06);
-  transition: width 0.6s ease-out, height 0.6s ease-out, opacity 0.6s ease-out;
-  opacity: 0;
-}
-.publish-entry:hover .publish-ripple {
-  width: 300px; height: 300px; opacity: 1;
-}
-.publish-entry .card-name { color: #059669; }
-
-/* ---- 响应式 ---- */
-@media (max-width: 768px) {
-  .category-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .category-card { padding: 10px 6px 10px; border-radius: 12px; }
-  .card-emoji { font-size: 22px; width: 38px; height: 38px; border-radius: 10px; margin-bottom: 6px; }
-  .card-name { font-size: 11px; }
-  .card-count { font-size: 10px; }
-}
-@media (max-width: 480px) {
-  .category-grid { grid-template-columns: repeat(4, 1fr); }
-  .card-emoji { font-size: 18px; width: 34px; height: 34px; border-radius: 8px; }
-  .card-name { font-size: 10px; }
-}
 
 /* ====== 商品网格 + 分页 ====== */
 .feed-section { margin-bottom: 24px; }
@@ -342,28 +481,18 @@ onMounted(async () => {
   color: #10B981; font-weight: 600; display: flex; align-items: center; gap: 4px;
   white-space: nowrap;
 }
-
 .feed-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 14px;
   align-items: stretch;
 }
-.feed-card {
-  min-width: 0; /* 防止内容溢出撑大 */
-}
-.feed-card {
-  animation: fadeInUp 0.5s ease both;
-}
+.feed-card { min-width: 0; animation: fadeInUp 0.5s ease both; }
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
-.feed-pager {
-  display: flex; justify-content: center;
-  margin-top: 16px;
-}
+.feed-pager { display: flex; justify-content: center; margin-top: 16px; }
 
 @media (max-width: 1024px) { .feed-grid { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 768px)  { .feed-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; } }
@@ -379,31 +508,58 @@ onMounted(async () => {
   align-items: center; justify-content: center;
   cursor: pointer;
   box-shadow: 0 6px 24px rgba(16,185,129,0.45);
-  animation: fab-breathe 3s ease-in-out infinite;
-}
-@keyframes fab-breathe {
-  0%, 100% { box-shadow: 0 6px 24px rgba(16,185,129,0.45); }
-  50% { box-shadow: 0 6px 36px rgba(16,185,129,0.7); }
 }
 
 /* ====== 响应式 ====== */
 @media (max-width: 1024px) {
-  .category-grid { grid-template-columns: repeat(4, 1fr); }
-  .micro-banner { padding: 24px; }
-  .banner-left h1 { font-size: 26px; }
+  .home-hero { grid-template-columns: 190px 1fr; }
+  .hero-quick { display: none; }
 }
 @media (max-width: 768px) {
-  .category-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .category-card { padding: 14px 8px 12px; border-radius: 12px; }
-  .card-emoji { font-size: 28px; width: 48px; height: 48px; border-radius: 12px; }
-  .card-name { font-size: 12px; }
-  .micro-banner { padding: 20px; border-radius: 14px; margin-bottom: 20px; }
-  .banner-left h1 { font-size: 22px; }
-  .banner-stats { display: none; }
+  .home-hero { grid-template-columns: 1fr; }
+  /* 手机端分类侧栏改为横向滑动胶囊条，保证分类可见 */
+  .cat-sidebar { border-radius: 12px; }
+  .cat-side-head { display: none; }
+  .cat-side-list {
+    display: flex; overflow-x: auto; gap: 8px;
+    padding: 10px 12px;
+    scrollbar-width: none;
+  }
+  .cat-side-list::-webkit-scrollbar { display: none; }
+  .cat-side-item {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    background: #F0FDF4;
+    border-radius: 999px;
+  }
+  .cat-side-item .side-arrow { display: none; }
+  .side-name { font-size: 12px; }
+  .hero-carousel :deep(.el-carousel),
+  .hero-carousel :deep(.el-carousel__container) { height: 220px !important; }
+  .slide { padding: 24px; }
+  .slide-title { font-size: 22px; }
   /* 手机端 FAB 由 BottomNav 提供，此处隐藏 */
   .fab-publish { display: none; }
 }
-@media (max-width: 480px) {
-  .category-grid { grid-template-columns: repeat(2, 1fr); }
+</style>
+
+<!-- 分类悬停下拉弹层样式：popover 传送到 body，需非 scoped 全局样式 -->
+<style>
+.cat-sub-popover { padding: 12px 14px !important; }
+.cat-sub-popover .sub-head {
+  font-size: 13px; font-weight: 700; color: #1F2937;
+  margin-bottom: 8px;
 }
+.cat-sub-popover .sub-items {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.cat-sub-popover .sub-item {
+  padding: 4px 12px;
+  background: #F0FDF4;
+  border-radius: 999px;
+  font-size: 12px; color: #059669;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cat-sub-popover .sub-item:hover { background: #D1FAE5; }
 </style>

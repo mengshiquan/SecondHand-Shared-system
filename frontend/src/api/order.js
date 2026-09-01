@@ -8,12 +8,12 @@ export function getOrderList(params) {
   return request.get('/order/list', { params })
 }
 
-export function getOrderDetail(id) {
-  return request.get(`/order/${id}`)
+export function getOrderStatusCounts() {
+  return request.get('/order/status-counts')
 }
 
-export function payOrder(id) {
-  return request.put(`/order/${id}/pay`)
+export function getOrderDetail(id) {
+  return request.get(`/order/${id}`)
 }
 
 export function updateOrderStatus(id, status) {

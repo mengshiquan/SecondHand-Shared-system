@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getToken, setToken, getUser, setUser, clearAuth } from '@/utils/auth'
+import { getToken, getUser, setAuth, clearAuth, isRemembered } from '@/utils/auth'
 import { login as loginApi, getUserInfo } from '@/api/user'
 
 export const useUserStore = defineStore('user', () => {
@@ -10,7 +10,11 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => userInfo.value?.role === 'ADMIN' || userInfo.value?.role === 'SUPER_ADMIN')
 
-  async function login(form) {
+  /**
+   * 登录。remember=true 时登录态写入 localStorage（新标签页/重启浏览器继承），
+   * false 时仅当前标签页有效——多标签页可各自登录不同账号互不干扰。
+   */
+  async function login(form, remember = true) {
     const res = await loginApi(form)
     token.value = res.data.token
     userInfo.value = {
@@ -20,15 +24,15 @@ export const useUserStore = defineStore('user', () => {
       avatar: res.data.avatar,
       role: res.data.role
     }
-    setToken(res.data.token)
-    setUser(userInfo.value)
+    setAuth(res.data.token, userInfo.value, remember)
     return res.data
   }
 
   async function fetchUserInfo() {
     const res = await getUserInfo()
     userInfo.value = { ...userInfo.value, ...res.data }
-    setUser(userInfo.value)
+    // 同步刷新存储；若处于"记住我"状态则保持 localStorage 一致
+    setAuth(token.value, userInfo.value, isRemembered())
     return res.data
   }
 

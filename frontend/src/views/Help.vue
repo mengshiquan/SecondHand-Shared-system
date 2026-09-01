@@ -50,8 +50,8 @@
 
 <style scoped>
 .page-header { margin-bottom: 32px; text-align: center; }
-.page-title { font-size: 28px; font-weight: 800; color: #1F2937; margin: 0 0 8px; }
-.page-sub { font-size: 15px; color: #9CA3AF; margin: 0; }
+.page-title { font-size: 28px; margin: 0 0 8px; justify-content: center; }
+.page-sub { font-size: 15px; }
 
 .help-card {
   max-width: 760px; margin: 0 auto;

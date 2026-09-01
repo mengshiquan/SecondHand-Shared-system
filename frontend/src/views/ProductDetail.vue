@@ -100,7 +100,7 @@
                   v-if="!isOwner"
                   class="btn-contact"
                   round
-                  @click="showContactDialog = true"
+                  @click="goChat"
                 >
                   <el-icon><ChatDotRound /></el-icon>联系卖家
                 </el-button>
@@ -170,6 +170,10 @@
             <span>填写收货信息</span>
           </div>
         </template>
+        <div v-if="addressFilled" class="address-auto-fill">
+          <el-icon><Location /></el-icon>
+          已根据你的默认收货地址自动填充，可修改
+        </div>
         <el-form ref="buyFormRef" :model="buyForm" :rules="buyRules" label-width="80px">
           <el-form-item label="收货人" prop="buyerName">
             <el-input v-model="buyForm.buyerName" placeholder="请输入姓名" />
@@ -191,49 +195,6 @@
         <template #footer>
           <el-button @click="buyDialogVisible = false">取消</el-button>
           <el-button type="primary" :loading="buying" @click="confirmBuy">确定购买</el-button>
-        </template>
-      </el-dialog>
-
-      <!-- 联系卖家弹窗 -->
-      <el-dialog v-model="showContactDialog" width="420px" :close-on-click-modal="false">
-        <template #header>
-          <div class="dialog-header">
-            <el-icon :size="22" color="#10B981"><ChatDotRound /></el-icon>
-            <span>联系卖家</span>
-          </div>
-        </template>
-        <div class="contact-content">
-          <div class="contact-seller-info">
-            <el-avatar :size="56">{{ product.sellerName?.[0] }}</el-avatar>
-            <div class="contact-seller-text">
-              <span class="contact-seller-name">{{ product.sellerName }}</span>
-              <span class="contact-seller-label">卖家</span>
-            </div>
-          </div>
-          <el-divider />
-          <el-form label-width="80px">
-            <el-form-item label="商品">
-              <span class="contact-product-name">{{ product.title }}</span>
-            </el-form-item>
-            <el-form-item label="留言">
-              <el-input
-                v-model="contactMessage"
-                type="textarea"
-                :rows="4"
-                placeholder="例如：请问这个商品还在吗？能否再便宜一些？"
-              />
-            </el-form-item>
-          </el-form>
-          <div class="contact-hint">
-            <el-icon><InfoFilled /></el-icon>
-            下单后可以在订单详情中查看买卖双方的联系方式
-          </div>
-        </div>
-        <template #footer>
-          <el-button @click="showContactDialog = false">关闭</el-button>
-          <el-button type="primary" @click="goBuyFromContact">
-            <el-icon><Goods /></el-icon>直接购买
-          </el-button>
         </template>
       </el-dialog>
 
@@ -316,54 +277,67 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, Document, Share, ChatDotRound, InfoFilled, Shop, WarningFilled, ShoppingCart } from '@element-plus/icons-vue'
+import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, Document, Share, ChatDotRound, InfoFilled, Shop, WarningFilled, ShoppingCart, Location } from '@element-plus/icons-vue'
 import { getProductDetail, getProductList } from '@/api/product'
 import { createOrder } from '@/api/order'
 import { addToCart } from '@/api/cart'
+import { getAddressList } from '@/api/address'
 import { toggleFavorite } from '@/api/favorite'
 import { getCommentList, addComment } from '@/api/comment'
 import { submitComplaint } from '@/api/complaint'
 import { useUserStore } from '@/stores/user'
 import ProductCard from '@/components/ProductCard.vue'
 
+/**
+ * 商品详情页：展示商品信息、图片画廊、卖家卡片、购买/收藏/购物车、评论与投诉
+ */
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-const product = ref(null)
-const comments = ref([])
-const loading = ref(false)
-const buying = ref(false)
-const buyDialogVisible = ref(false)
-const buyFormRef = ref(null)
-const galleryIndex = ref(0)
-const showContactDialog = ref(false)
-const contactMessage = ref('')
-const sellerProducts = ref([])
-const showComplaintDialog = ref(false)
-const complaining = ref(false)
+const product = ref(null)              // 商品详情对象
+const comments = ref([])               // 商品评价列表
+const loading = ref(false)             // 详情加载状态
+const buying = ref(false)              // 下单提交中
+const buyDialogVisible = ref(false)    // 购买信息弹窗显隐
+const buyFormRef = ref(null)           // 购买表单引用
+const galleryIndex = ref(0)            // 当前展示图片索引
+const sellerProducts = ref([])         // 卖家其他在售商品
+const showComplaintDialog = ref(false) // 投诉弹窗显隐
+const complaining = ref(false)         // 投诉提交中
 const complaintForm = reactive({ targetUserId: null, reason: '', description: '' })
 
-const commentForm = reactive({ content: '', rating: 5 })
-const buyForm = reactive({ buyerName: '', buyerPhone: '', buyerAddress: '', remark: '' })
+const commentForm = reactive({ content: '', rating: 5 })                                  // 评论表单
+const buyForm = reactive({ buyerName: '', buyerPhone: '', buyerAddress: '', remark: '', addressId: null }) // 购买表单
+const addressFilled = ref(false)                                                         // 是否已自动填充默认地址
 const buyRules = {
   buyerName: [{ required: true, message: '请输入收货人姓名', trigger: 'blur' }],
   buyerPhone: [{ required: true, message: '请输入联系电话', trigger: 'blur' }, { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }],
   buyerAddress: [{ required: true, message: '请输入收货地址', trigger: 'blur' }]
 }
 
+// 当前登录用户是否为卖家（控制购买/联系等按钮显隐）
 const isOwner = computed(() => product.value?.userId === userStore.userInfo?.userId)
 
+// 商品状态中文映射
 const statusText = computed(() => {
   const map = { ON_SALE: '在售', SOLD: '已售', OFF_SHELF: '已下架' }
   return map[product.value?.status] || ''
 })
 
+/**
+ * 将后端 ISO 时间格式化为 yyyy-MM-dd HH:mm
+ * @param {string} t ISO 时间字符串
+ * @returns {string}
+ */
 function formatTime(t) {
   if (!t) return ''
   return t.replace('T', ' ').substring(0, 16)
 }
 
+/**
+ * 加载商品详情、评价列表及卖家其他商品
+ */
 async function loadDetail() {
   loading.value = true
   try {
@@ -379,6 +353,10 @@ async function loadDetail() {
   }
 }
 
+/**
+ * 加载卖家其他在售商品（排除当前商品，最多 6 条）
+ * @param {number} sellerId 卖家用户 ID
+ */
 async function loadSellerProducts(sellerId) {
   try {
     const res = await getProductList({ sellerId, status: 'ON_SALE', pageSize: 7 })
@@ -386,42 +364,84 @@ async function loadSellerProducts(sellerId) {
   } catch { sellerProducts.value = [] }
 }
 
-function handleBuy() {
+/**
+ * 点击“立即购买”：
+ * 1. 未登录跳转登录页
+ * 2. 清空表单并打开购买弹窗
+ * 3. 尝试自动填充默认收货地址
+ */
+async function handleBuy() {
   if (!userStore.isLoggedIn) { router.push('/login'); return }
-  Object.assign(buyForm, { buyerName: '', buyerPhone: '', buyerAddress: '', remark: '' })
+  Object.assign(buyForm, { buyerName: '', buyerPhone: '', buyerAddress: '', remark: '', addressId: null })
+  addressFilled.value = false
   buyDialogVisible.value = true
+  // 自动填充默认收货地址，避免每次下单重复填写；失败时仍可手动输入
+  try {
+    const res = await getAddressList()
+    const list = res.data || []
+    const def = list.find(a => a.isDefault === 1 || a.isDefault === true) || list[0]
+    if (def) {
+      Object.assign(buyForm, {
+        buyerName: def.receiverName,
+        buyerPhone: def.phone,
+        buyerAddress: def.address,
+        addressId: def.id
+      })
+      addressFilled.value = true
+    }
+  } catch { /* 忽略：允许手动填写 */ }
 }
 
-function goBuyFromContact() {
-  showContactDialog.value = false
-  handleBuy()
+/**
+ * 联系卖家：未登录提示并跳转登录，已登录跳转聊天页并带上商品 ID
+ */
+function goChat() {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再联系卖家')
+    router.push('/login')
+    return
+  }
+  router.push({ path: `/chat/${product.value.userId}`, query: { productId: product.value.id } })
 }
 
+/**
+ * 确认购买：校验表单 → 创建订单 → 关闭弹窗 → 提示并跳转订单列表
+ */
 async function confirmBuy() {
   await buyFormRef.value.validate()
   buying.value = true
   try {
-    const remark = contactMessage.value ? `${buyForm.remark}\n买家留言：${contactMessage.value}` : buyForm.remark
-    await createOrder({ ...buyForm, remark, productId: product.value.id })
+    await createOrder({ ...buyForm, productId: product.value.id })
     buyDialogVisible.value = false
-    contactMessage.value = ''
     ElMessage.success('下单成功，请在30分钟内完成付款')
     router.push('/orders')
+  } catch (e) {
+    console.error(e)
+    ElMessage.error(e?.response?.data?.message || '下单失败，请重试')
   } finally { buying.value = false }
 }
 
+/**
+ * 切换商品收藏状态
+ */
 async function handleFavorite() {
   await toggleFavorite(product.value.id)
   product.value.favorited = !product.value.favorited
   ElMessage.success(product.value.favorited ? '收藏成功' : '已取消收藏')
 }
 
+/**
+ * 加入购物车：未登录跳转登录，已登录调用接口
+ */
 async function handleAddCart() {
   if (!userStore.isLoggedIn) { router.push('/login'); return }
   await addToCart(product.value.id)
   ElMessage.success('已加入购物车')
 }
 
+/**
+ * 提交商品评价并清空表单、刷新详情
+ */
 async function submitComment() {
   if (!commentForm.content.trim()) {
     ElMessage.warning('请输入评论内容')
@@ -437,11 +457,19 @@ async function submitComment() {
   loadDetail()
 }
 
+/**
+ * 评分星级对应中文文案
+ * @param {number} r 1-5 星
+ * @returns {string}
+ */
 function ratingText(r) {
   const map = { 1: '很差', 2: '较差', 3: '一般', 4: '不错', 5: '很棒' }
   return map[r] || ''
 }
 
+/**
+ * 分享商品：优先使用系统分享，不支持则复制链接
+ */
 async function handleShare() {
   const url = window.location.href
   if (navigator.share) {
@@ -458,13 +486,24 @@ async function handleShare() {
   }
 }
 
+/**
+ * 图片画廊：切换到上一张
+ */
 function prevImage() {
   if (galleryIndex.value > 0) galleryIndex.value--
 }
+
+/**
+ * 图片画廊：切换到下一张
+ */
 function nextImage() {
   if (product.value && galleryIndex.value < product.value.images.length - 1) galleryIndex.value++
 }
 
+/**
+ * 打开投诉弹窗并设置被投诉用户 ID
+ * @param {number} userId 被投诉用户 ID
+ */
 function openComplaint(userId) {
   complaintForm.targetUserId = userId
   complaintForm.reason = ''
@@ -472,6 +511,9 @@ function openComplaint(userId) {
   showComplaintDialog.value = true
 }
 
+/**
+ * 提交用户投诉
+ */
 async function submitComplaintHandler() {
   if (!complaintForm.reason) { ElMessage.warning('请选择投诉原因'); return }
   if (!complaintForm.description.trim()) { ElMessage.warning('请填写详细描述'); return }
@@ -487,6 +529,7 @@ async function submitComplaintHandler() {
   } finally { complaining.value = false }
 }
 
+// 页面挂载后加载商品详情
 onMounted(loadDetail)
 </script>
 
@@ -709,28 +752,13 @@ onMounted(loadDetail)
   margin-top: 4px; padding: 10px; font-size: 13px;
   color: #F59E0B; background: #FFFBEB; border-radius: 8px;
 }
+.address-auto-fill {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 12px; padding: 8px 12px;
+  font-size: 12px; color: #059669; background: #F0FDF4;
+  border: 1px solid #D1FAE5; border-radius: 8px;
+}
 .buy-notice strong { color: #D97706; }
-
-/* ====== 联系卖家弹窗 ====== */
-.contact-content {
-  display: flex; flex-direction: column; gap: 16px;
-}
-.contact-seller-info {
-  display: flex; align-items: center; gap: 14px;
-}
-.contact-seller-text {
-  display: flex; flex-direction: column; gap: 2px;
-}
-.contact-seller-name { font-size: 16px; font-weight: 700; color: #1F2937; }
-.contact-seller-label { font-size: 13px; color: #9CA3AF; }
-.contact-product-name { font-size: 14px; color: #374151; font-weight: 500; }
-.contact-hint {
-  display: flex; align-items: center; gap: 8px;
-  padding: 12px 14px;
-  background: #F0FDF4; border-radius: 10px;
-  font-size: 13px; color: #059669;
-}
-.contact-hint .el-icon { flex-shrink: 0; }
 
 /* ====== 评论区 ====== */
 .comments-section {

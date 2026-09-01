@@ -56,13 +56,33 @@ public class FavoriteServiceImpl extends ServiceImpl<FavoriteMapper, Favorite> i
                 .eq(Favorite::getUserId, userId)
                 .eq(Favorite::getProductId, productId));
         if (favorite != null) {
-            removeById(favorite.getId());
+            // 物理删除：表上有唯一索引 (user_id, product_id)，逻辑删除会残留行，
+            // 导致连续收藏/取消后再次收藏违反唯一约束报“系统繁忙”
+            baseMapper.physicalDelete(userId, productId);
         } else {
+            // 清除可能残留的已逻辑删除行，避免插入时违反唯一约束
+            baseMapper.physicalDelete(userId, productId);
             Favorite newFavorite = new Favorite();
             newFavorite.setUserId(userId);
             newFavorite.setProductId(productId);
             save(newFavorite);
         }
+    }
+
+    @Override
+    public void ensureFavorite(Long productId) {
+        Product product = productService.getById(productId);
+        if (product == null) {
+            throw new BusinessException("商品不存在");
+        }
+        Long userId = UserContext.getUserId();
+        if (isFavorited(productId)) return;
+        // 清除可能残留的已逻辑删除行，避免插入时违反唯一约束
+        baseMapper.physicalDelete(userId, productId);
+        Favorite favorite = new Favorite();
+        favorite.setUserId(userId);
+        favorite.setProductId(productId);
+        save(favorite);
     }
 
     @Override

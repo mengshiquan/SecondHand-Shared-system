@@ -49,6 +49,13 @@ public class CartController {
         return Result.success();
     }
 
+    /** 移入收藏：收藏所选商品并移出购物车 */
+    @PostMapping("/move-to-favorite")
+    public Result<Void> moveToFavorite(@RequestBody Map<String, List<Long>> params) {
+        cartService.moveToFavorite(params.get("ids"));
+        return Result.success();
+    }
+
     /** 清空 */
     @DeleteMapping("/clear")
     public Result<Void> clear() {

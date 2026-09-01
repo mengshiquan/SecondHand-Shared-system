@@ -65,9 +65,29 @@ public class JwtInterceptor implements HandlerInterceptor {
         request.setAttribute("userId", userId);
         request.setAttribute("role", role);
 
+        // 管理端接口实时复核数据库角色与账号状态：角色变更/禁用/删除立即生效，
+        // 避免旧 JWT（最长 24 小时）继续保有管理员权限
+        String uri = request.getRequestURI();
+        if (uri.contains("/admin/") && ("ADMIN".equals(role) || "SUPER_ADMIN".equals(role))) {
+            User current = blacklistService.getUserById(userId);
+            if (current == null) {
+                writeError(response, HttpServletResponse.SC_UNAUTHORIZED, 401, "账号不存在，请重新登录");
+                return false;
+            }
+            if (current.getStatus() != null && current.getStatus() == 0) {
+                writeError(response, HttpServletResponse.SC_FORBIDDEN, 403, "账号已被禁用");
+                return false;
+            }
+            if (!"ADMIN".equals(current.getRole()) && !"SUPER_ADMIN".equals(current.getRole())) {
+                writeError(response, HttpServletResponse.SC_UNAUTHORIZED, 401, "你的管理员权限已被取消，请重新登录");
+                return false;
+            }
+            // 以数据库实时角色为准（例如晋升/降级后无需等令牌过期）
+            request.setAttribute("role", current.getRole());
+        }
+
         // 小黑屋检查：对受限写入接口拦截
         if (blacklistService.isBlacklisted(userId)) {
-            String uri = request.getRequestURI();
             String method = request.getMethod();
             boolean restricted = false;
             for (String rp : RESTRICTED_PATHS) {
@@ -93,5 +113,16 @@ public class JwtInterceptor implements HandlerInterceptor {
         }
 
         return true;
+    }
+
+    /** 输出统一格式的认证/权限错误响应 */
+    private void writeError(HttpServletResponse response, int httpStatus, int code, String message) throws Exception {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setStatus(httpStatus);
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", code);
+        result.put("message", message);
+        result.put("data", null);
+        response.getWriter().write(objectMapper.writeValueAsString(result));
     }
 }

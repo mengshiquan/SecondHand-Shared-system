@@ -80,10 +80,10 @@ public class BlacklistServiceImpl implements BlacklistService {
             justUnblacklisted.add(u.getId());
         }
 
-        // 只查询非管理员、非已有的黑名单用户
+        // 只查询非管理员、非已有的黑名单用户（管理员是平台 staff，不参与自动拉黑）
         List<User> allUsers = userService.list(new LambdaQueryWrapper<User>()
                 .isNull(User::getBlacklistStatus)
-                .ne(User::getRole, "ADMIN"));
+                .notIn(User::getRole, "ADMIN", "SUPER_ADMIN"));
         // 排除刚解封的用户
         allUsers.removeIf(u -> justUnblacklisted.contains(u.getId()));
         if (allUsers.isEmpty()) return;

@@ -18,6 +18,9 @@ public interface CartService extends IService<Cart> {
 
     void removeBatch(List<Long> ids);
 
+    /** 移入收藏：收藏所选购物车商品并移出购物车 */
+    void moveToFavorite(List<Long> ids);
+
     void clear();
 
     List<OrderVO> checkout(CartCheckoutDTO dto);

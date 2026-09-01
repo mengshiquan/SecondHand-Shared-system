@@ -1,5 +1,6 @@
 package com.campus.secondhand.service.impl;
 
+import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -49,6 +50,10 @@ import java.util.HashMap;
 
 @Service
 public class AdminServiceImpl implements AdminService {
+
+    /** 重置密码时未指定新密码的默认值 */
+        /** 留空重置密码时使用的随机密码长度 */
+        private static final int RESET_PASSWORD_LENGTH = 8;
 
     @Autowired
     private UserService userService;
@@ -104,8 +109,11 @@ public class AdminServiceImpl implements AdminService {
         checkAdmin();
         Page<User> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        // 普通用户管理不含管理员，管理员统一在“管理员管理”中维护（含已提升为管理员后的用户）
+        wrapper.notIn(User::getRole, "ADMIN", "SUPER_ADMIN");
         if (keyword != null && !keyword.isEmpty()) {
-            wrapper.like(User::getUsername, keyword).or().like(User::getNickname, keyword);
+            // 用 and(...) 包裹，避免 or 破坏角色过滤条件
+            wrapper.and(w -> w.like(User::getUsername, keyword).or().like(User::getNickname, keyword));
         }
         if (verifyStatus != null && !verifyStatus.isEmpty()) {
             wrapper.eq(User::getVerifyStatus, verifyStatus);
@@ -131,6 +139,11 @@ public class AdminServiceImpl implements AdminService {
             if (user != null && "PENDING".equals(user.getVerifyStatus())) {
                 user.setVerifyStatus(target);
                 userService.updateById(user);
+                // 审核结果通知用户
+                notificationService.send(uid, "APPROVE".equals(action) ? "校园认证已通过" : "校园认证被拒绝",
+                        "APPROVE".equals(action)
+                                ? "你的校园认证申请已通过，现在可以发布和购买商品了。"
+                                : "你的校园认证申请被拒绝，请核对填写的学号与学校信息后重新提交。", "VERIFY");
             }
         }
     }
@@ -150,13 +163,15 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public IPage<ProductVO> productPage(Integer pageNum, Integer pageSize, String keyword) {
+    public IPage<ProductVO> productPage(Integer pageNum, Integer pageSize, String keyword, Long categoryId, Long parentCategoryId, String status) {
         checkAdmin();
         ProductQueryDTO query = new ProductQueryDTO();
         query.setPageNum(pageNum);
         query.setPageSize(pageSize);
         query.setKeyword(keyword);
-        query.setStatus(null);
+        query.setCategoryId(categoryId);
+        query.setParentCategoryId(parentCategoryId);
+        query.setStatus(status);
         return productMapper.selectProductPage(new Page<>(pageNum, pageSize), query);
     }
 
@@ -169,6 +184,30 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void saveCategory(Category category) {
         checkAdmin();
+        if (category.getName() == null || category.getName().isBlank()) {
+            throw new BusinessException("分类名称不能为空");
+        }
+        // 只支持两级分类：校验上级必须是一级分类，且不能指向自己
+        if (category.getParentId() != null) {
+            if (category.getParentId().equals(category.getId())) {
+                throw new BusinessException("上级分类不能是自己");
+            }
+            Category parent = categoryService.getById(category.getParentId());
+            if (parent == null) {
+                throw new BusinessException("上级分类不存在");
+            }
+            if (parent.getParentId() != null) {
+                throw new BusinessException("仅支持两级分类，不能挂在子分类下");
+            }
+            // 已有子分类的一级分类不能再降级为子分类，否则会形成三级结构
+            if (category.getId() != null) {
+                long subCount = categoryService.count(new LambdaQueryWrapper<Category>()
+                        .eq(Category::getParentId, category.getId()));
+                if (subCount > 0) {
+                    throw new BusinessException("该分类下已有子分类，不能再设为子分类");
+                }
+            }
+        }
         if (category.getId() == null) {
             categoryService.save(category);
         } else {
@@ -183,6 +222,11 @@ public class AdminServiceImpl implements AdminService {
                 .eq(Product::getCategoryId, id));
         if (count > 0) {
             throw new BusinessException("该分类下存在商品，无法删除");
+        }
+        long subCount = categoryService.count(new LambdaQueryWrapper<Category>()
+                .eq(Category::getParentId, id));
+        if (subCount > 0) {
+            throw new BusinessException("该分类下存在子分类，请先删除子分类");
         }
         categoryService.removeById(id);
     }
@@ -312,10 +356,13 @@ public class AdminServiceImpl implements AdminService {
                 new LambdaQueryWrapper<Appeal>().eq(Appeal::getStatus, "PENDING"));
         long blacklist = userService.count(
                 new LambdaQueryWrapper<User>().isNotNull(User::getBlacklistStatus));
+        long arbitrations = orderMapper.selectCount(
+                new LambdaQueryWrapper<Order>().eq(Order::getRefundStatus, "ARBITRATION"));
         result.put("pendingComplaints", complaints);
         result.put("pendingAppeals", appeals);
         result.put("blacklistCount", blacklist);
-        result.put("total", complaints + appeals + blacklist);
+        result.put("pendingArbitrations", arbitrations);
+        result.put("total", complaints + appeals + blacklist + arbitrations);
         return result;
     }
 
@@ -380,7 +427,8 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public IPage<User> adminPage(Integer pageNum, Integer pageSize) {
-        checkSuperAdmin();
+        // 普通管理员也可查看管理员列表（只读），增删改仍仅限超管（各自方法内 checkSuperAdmin）
+        checkAdmin();
         return userService.page(new Page<>(pageNum, pageSize),
                 new LambdaQueryWrapper<User>()
                         .in(User::getRole, "ADMIN", "SUPER_ADMIN")
@@ -461,6 +509,7 @@ public class AdminServiceImpl implements AdminService {
         checkAdmin();
         User user = userService.getById(id);
         if (user == null) throw new BusinessException("用户不存在");
+        if ("SUPER_ADMIN".equals(user.getRole())) throw new BusinessException("不能修改超级管理员的信息");
         user.setNickname(nickname);
         user.setPhone(phone);
         user.setEmail(email);
@@ -497,12 +546,32 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void resetUserPassword(Long id) {
+    public String resetUserPassword(Long id, String newPassword) {
         checkAdmin();
         User user = userService.getById(id);
         if (user == null) throw new BusinessException("用户不存在");
         if ("SUPER_ADMIN".equals(user.getRole())) throw new BusinessException("不能重置超级管理员密码");
-        user.setPassword(passwordEncoder.encode(cn.hutool.core.util.RandomUtil.randomString(8)));
+        // 支持管理员自定义新密码；留空则生成随机密码（避免多人共用同一弱密码），并将明文返回给管理员告知用户
+        String plain = (newPassword == null || newPassword.isBlank())
+                ? RandomUtil.randomString(RESET_PASSWORD_LENGTH) : newPassword.trim();
+        if (plain.length() < 6 || plain.length() > 20) throw new BusinessException("新密码长度需为6-20个字符");
+        user.setPassword(passwordEncoder.encode(plain));
+        userService.updateById(user);
+        return plain;
+    }
+
+    @Override
+    public void updateUserRole(Long id, String role) {
+        checkSuperAdmin();
+        if (!"USER".equals(role) && !"ADMIN".equals(role)) {
+            throw new BusinessException("无效的角色");
+        }
+        User user = userService.getById(id);
+        if (user == null) throw new BusinessException("用户不存在");
+        if ("SUPER_ADMIN".equals(user.getRole())) throw new BusinessException("不能变更超级管理员的角色");
+        if (user.getId().equals(UserContext.getUserId())) throw new BusinessException("不能变更自己的角色");
+        if (role.equals(user.getRole())) throw new BusinessException("该用户已是此角色");
+        user.setRole(role);
         userService.updateById(user);
     }
 }
