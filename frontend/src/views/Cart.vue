@@ -153,6 +153,7 @@
 </template>
 
 <script setup>
+// 购物车页：管理商品选择、批量移除、移入收藏和批量下单。
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -222,25 +223,30 @@ const totalAmount = computed(() =>
     .toFixed(2)
 )
 
+/** 全选或取消全选购物车商品。 */
 function toggleAll(v) {
   const ids = validFiltered.value.map(i => i.id)
   selectedIds.value = v
     ? [...new Set([...selectedIds.value, ...ids])]
     : selectedIds.value.filter(id => !ids.includes(id))
 }
+/** 切换单个购物车项选中状态。 */
 function toggleItem(item, v) {
   selectedIds.value = v
     ? [...selectedIds.value, item.id]
     : selectedIds.value.filter(id => id !== item.id)
 }
+/** 全选或取消全选同一卖家分组。 */
 function groupAll(g) {
   const valid = g.items.filter(i => !i.invalid)
   return valid.length > 0 && valid.every(i => selectedIds.value.includes(i.id))
 }
+/** 根据分组内选中项回填全选框状态。 */
 function groupSome(g) {
   const valid = g.items.filter(i => !i.invalid)
   return !groupAll(g) && valid.some(i => selectedIds.value.includes(i.id))
 }
+/** 切换某个卖家分组的选中状态。 */
 function toggleGroup(g, v) {
   const ids = g.items.filter(i => !i.invalid).map(i => i.id)
   selectedIds.value = v
@@ -248,6 +254,7 @@ function toggleGroup(g, v) {
     : selectedIds.value.filter(id => !ids.includes(id))
 }
 
+/** 加载购物车并按卖家分组。 */
 async function loadCart() {
   loading.value = true
   try {
@@ -260,16 +267,19 @@ async function loadCart() {
   } finally { loading.value = false }
 }
 
+/** 将单个购物车商品移入收藏。 */
 async function moveOne(item) {
   await moveToFavorite([item.id])
   ElMessage.success('已移入收藏')
   loadCart()
 }
+/** 删除单个购物车商品。 */
 async function removeOne(item) {
   await removeFromCart(item.id)
   ElMessage.success('已删除')
   loadCart()
 }
+/** 批量将选中商品移入收藏。 */
 async function batchMoveFavorite() {
   await ElMessageBox.confirm(`将选中的 ${selectedIds.value.length} 件商品移入收藏？`, '提示', { type: 'info' })
   await moveToFavorite(selectedIds.value)
@@ -277,6 +287,7 @@ async function batchMoveFavorite() {
   selectedIds.value = []
   loadCart()
 }
+/** 批量删除选中购物车商品。 */
 async function batchDelete() {
   await ElMessageBox.confirm(`删除选中的 ${selectedIds.value.length} 件商品？`, '提示', { type: 'warning' })
   await removeBatchFromCart(selectedIds.value)
@@ -285,6 +296,7 @@ async function batchDelete() {
   loadCart()
 }
 
+/** 打开结算前地址选择。 */
 async function openCheckout() {
   if (!selectedIds.value.length) return
   const res = await getAddressList()
@@ -294,6 +306,7 @@ async function openCheckout() {
   checkoutVisible.value = true
 }
 
+/** 确认地址并批量创建订单。 */
 async function confirmCheckout() {
   checkingOut.value = true
   try {

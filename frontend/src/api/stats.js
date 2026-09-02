@@ -1,5 +1,6 @@
 import request from '@/utils/request'
 
+/** 查询销售统计汇总和明细。 */
 export function getSalesStats(params) {
   return request.get('/admin/stats/sales', { params })
 }

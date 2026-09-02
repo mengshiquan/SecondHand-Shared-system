@@ -91,6 +91,7 @@
 </template>
 
 <script setup>
+// 商品发布/编辑页：收集标题、描述、价格、分类和图片，并提交到后端。
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -125,6 +126,7 @@ const rules = {
   description: [{ required: true, message: '请输入商品描述', trigger: 'blur' }]
 }
 
+/** 校验并提交商品发布或编辑表单。 */
 async function handleSubmit() {
   await formRef.value.validate()
   loading.value = true

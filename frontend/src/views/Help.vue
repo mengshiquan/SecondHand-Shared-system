@@ -46,6 +46,7 @@
 </template>
 
 <script setup>
+// 帮助中心页：集中展示常见问题和平台使用说明。
 </script>
 
 <style scoped>

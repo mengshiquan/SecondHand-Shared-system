@@ -76,6 +76,7 @@
 </template>
 
 <script setup>
+// 注册页：收集账号、校园身份和基础资料，校验通过后完成注册。
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { register, getCaptcha } from '@/api/user'

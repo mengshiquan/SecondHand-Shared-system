@@ -657,6 +657,7 @@
 </template>
 
 <script setup>
+// 后台管理页：集中维护仪表盘、用户、商品、订单、分类、投诉申诉和小黑屋。
 import { ref, reactive, computed, onMounted, watch, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { DataAnalysis, Grid, Plus, WarningFilled, Bell, Download } from '@element-plus/icons-vue'
@@ -775,6 +776,7 @@ const scanning = ref(false)
 
 // 后台待处理事项计数：与顶栏角标同源，进入后台后在对应 Tab 标签上标红，指明消息在哪个模块
 const adminNotify = reactive({ pendingComplaints: 0, pendingAppeals: 0, blacklistCount: 0, pendingArbitrations: 0 })
+/** 加载后台通知汇总和角标数量。 */
 async function loadAdminNotify() {
   try {
     const res = await getNotifications()
@@ -790,11 +792,13 @@ const appeals = ref([])
 let pieChart = null
 let barChart = null
 
+/** 从后端拉取仪表盘统计。 */
 async function loadDashboard() {
   const res = await getDashboard()
   dashboard.value = res.data
 }
 
+/** 等待数据、渲染和图表容器就绪后刷新图表。 */
 async function loadDashboardData() {
   // 先等数据：仪表盘 + 订单 + 商品列表（用于提取分类统计）
   await Promise.all([loadDashboard(), loadAdminOrders(), loadAdminProducts()])
@@ -805,6 +809,7 @@ async function loadDashboardData() {
   renderCharts()
 }
 
+/** 初始化或刷新仪表盘图表。 */
 function renderCharts() {
   const pieBox = document.getElementById('pieChartBox')
   const barBox = document.getElementById('barChartBox')
@@ -813,6 +818,8 @@ function renderCharts() {
   if (barBox) initBarChart(barBox)
 }
 
+/** 渲染分类商品数量饼图。 */
+/** 渲染分类商品数量饼图。 */
 function initPieChart(dom) {
   if (pieChart) pieChart.dispose()
   if (!dom || dom.offsetParent === null) {
@@ -853,6 +860,8 @@ function initPieChart(dom) {
   })
 }
 
+/** 渲染核心业务数据柱状图。 */
+/** 渲染核心业务数据柱状图。 */
 function initBarChart(dom) {
   if (barChart) barChart.dispose()
   if (!dom || dom.offsetParent === null) {
@@ -892,6 +901,7 @@ function initBarChart(dom) {
   })
 }
 
+/** 窗口尺寸变化时同步调整图表。 */
 function handleResize() {
   pieChart?.resize()
   barChart?.resize()
@@ -899,26 +909,31 @@ function handleResize() {
   salesBarChart?.resize()
 }
 
+/** 分页加载普通用户列表。 */
 async function loadUsers() {
   const res = await getAdminUsers({ pageNum: 1, pageSize: 50, verifyStatus: pendingFilter.value ? 'PENDING' : undefined })
   users.value = res.data.records
   userTotal.value = res.data.total
 }
 
+/** 切换只看待审核用户的过滤条件。 */
 function togglePendingFilter() {
   pendingFilter.value = !pendingFilter.value
   loadUsers()
 }
 
+/** 认证状态转中文标签。 */
 function verifyStatusText(s) {
   const map = { PENDING: '待审核', APPROVED: '已认证', REJECTED: '已拒绝' }
   return map[s] || '未提交'
 }
+/** 认证状态转标签颜色类型。 */
 function verifyStatusType(s) {
   const map = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
   return map[s] || 'info'
 }
 
+/** 批量通过或拒绝校园认证。 */
 async function handleBatchVerify(action) {
   const ids = selectedVerifyUsers.value.map(u => u.id)
   const tip = action === 'APPROVE' ? '通过' : '拒绝'
@@ -928,6 +943,7 @@ async function handleBatchVerify(action) {
   loadUsers()
 }
 
+/** 审核单个用户的校园认证。 */
 async function handleVerify(row, action) {
   const tip = action === 'APPROVE' ? '通过' : '拒绝'
   const info = row.studentId || row.schoolName ? `（${row.schoolName || '-'} · ${row.studentId || '-'}）` : ''
@@ -937,11 +953,13 @@ async function handleVerify(row, action) {
   loadUsers()
 }
 
+/** 打开后台创建用户弹窗。 */
 function openUserDialog() {
   Object.assign(userForm, { username: '', password: '', nickname: '', role: 'USER' })
   userDialogVisible.value = true
 }
 
+/** 保存后台新建用户。 */
 async function saveUser() {
   await userFormRef.value.validate()
   userSaving.value = true
@@ -953,11 +971,13 @@ async function saveUser() {
   } finally { userSaving.value = false }
 }
 
+/** 打开用户资料编辑弹窗。 */
 function openUserEditDialog(row) {
   Object.assign(userEditForm, { id: row.id, nickname: row.nickname || '', phone: row.phone || '', email: row.email || '' })
   userEditDialogVisible.value = true
 }
 
+/** 保存用户资料修改。 */
 async function saveUserEdit() {
   userSaving.value = true
   try {
@@ -972,6 +992,7 @@ async function saveUserEdit() {
   } finally { userSaving.value = false }
 }
 
+/** 重置用户密码并提示新密码。 */
 async function handleResetPassword(row) {
   let newPassword = ''
   try {
@@ -995,6 +1016,7 @@ async function handleResetPassword(row) {
   )
 }
 
+/** 调整用户角色为普通用户或管理员。 */
 async function handleSetRole(row, role) {
   const tip = role === 'ADMIN' ? '设为管理员' : '取消管理员权限'
   await ElMessageBox.confirm(`确认将用户「${row.username}」${tip}？`, '角色调整', { type: 'warning' })
@@ -1003,6 +1025,7 @@ async function handleSetRole(row, role) {
   loadUsers()
 }
 
+/** 删除用户并级联清理关联数据。 */
 async function handleDeleteUser(row) {
   await ElMessageBox.confirm(`确认删除用户「${row.username}」？其商品将下架，未完成订单将取消。`, '删除用户', { type: 'warning' })
   await deleteUser(row.id)
@@ -1010,6 +1033,7 @@ async function handleDeleteUser(row) {
   loadUsers()
 }
 
+/** 分页加载后台商品列表。 */
 async function loadAdminProducts() {
   // 分类筛选依赖分类数据，首次进入商品管理时自动加载
   if (!categories.value.length) loadCategories()
@@ -1024,6 +1048,7 @@ async function loadAdminProducts() {
   adminProducts.value = res.data.records
 }
 
+/** 分页加载后台订单列表。 */
 async function loadAdminOrders() {
   const res = await getAdminOrders({
     pageNum: 1,
@@ -1034,11 +1059,13 @@ async function loadAdminOrders() {
   adminOrders.value = res.data.records
 }
 
+/** 加载分类树供筛选和编辑使用。 */
 async function loadCategories() {
   const res = await getCategoryList()
   categories.value = res.data
 }
 
+/** 启用或禁用用户。 */
 async function toggleUserStatus(row) {
   const newStatus = row.status === 1 ? 0 : 1
   await updateUserStatus(row.id, newStatus)
@@ -1046,12 +1073,15 @@ async function toggleUserStatus(row) {
   loadUsers()
 }
 
+/** 上架或下架后台商品。 */
 async function toggleProductStatus(row, status) {
   await updateProductStatus(row.id, status)
   ElMessage.success(status === 'ON_SALE' ? '已上架' : '已下架')
   loadAdminProducts()
 }
 
+/** 删除后台商品。 */
+/** 删除后台商品。 */
 async function handleDeleteProduct(id) {
   await ElMessageBox.confirm('确认删除？', '提示', { type: 'warning' })
   await deleteAdminProduct(id)
@@ -1060,6 +1090,7 @@ async function handleDeleteProduct(id) {
 }
 
 // === 订单管理：强制状态/删除/仲裁 ===
+/** 退款状态转中文标签。 */
 function refundStatusText(s) {
   const map = {
     REQUESTED: '退款待处理', SELLER_AGREED: '卖家已同意', SELLER_REJECTED: '卖家已拒绝',
@@ -1067,6 +1098,7 @@ function refundStatusText(s) {
   }
   return s && s !== 'NONE' ? (map[s] || s) : ''
 }
+/** 退款状态转标签颜色类型。 */
 function refundStatusType(s) {
   const map = {
     REQUESTED: 'warning', SELLER_AGREED: 'success', SELLER_REJECTED: 'danger',
@@ -1075,6 +1107,7 @@ function refundStatusType(s) {
   return map[s] || 'info'
 }
 
+/** 管理员强制修改订单状态。 */
 async function forceOrderStatus(row, status) {
   const tip = status === 'COMPLETED' ? '强制完成' : '强制取消'
   await ElMessageBox.confirm(`确认${tip}订单 ${row.orderNo}？`, '管理员操作', { type: 'warning' })
@@ -1083,6 +1116,7 @@ async function forceOrderStatus(row, status) {
   loadAdminOrders()
 }
 
+/** 删除已完成或已取消订单。 */
 async function handleDeleteAdminOrder(id) {
   await ElMessageBox.confirm('确认删除该订单？', '提示', { type: 'warning' })
   await deleteAdminOrder(id)
@@ -1090,6 +1124,7 @@ async function handleDeleteAdminOrder(id) {
   loadAdminOrders()
 }
 
+/** 处理订单退款仲裁。 */
 async function handleArbitrate(row, refund) {
   const tip = refund ? '判定退款（订单取消，商品恢复在售）' : '维持交易（订单继续）'
   await ElMessageBox.confirm(`确认对订单 ${row.orderNo} ${tip}？`, '仲裁处理', { type: 'warning' })
@@ -1099,16 +1134,19 @@ async function handleArbitrate(row, refund) {
 }
 
 // === 管理员管理 ===
+/** 分页加载管理员列表。 */
 async function loadAdmins() {
   const res = await getAdminList({ pageNum: 1, pageSize: 50 })
   admins.value = res.data.records
 }
 
+/** 打开创建管理员弹窗。 */
 function openAdminDialog() {
   Object.assign(adminForm, { username: '', nickname: '' })
   adminDialogVisible.value = true
 }
 
+/** 保存新建管理员账号。 */
 async function saveAdmin() {
   await adminFormRef.value.validate()
   adminSaving.value = true
@@ -1123,11 +1161,13 @@ async function saveAdmin() {
   } finally { adminSaving.value = false }
 }
 
+/** 打开管理员编辑弹窗。 */
 function openAdminEditDialog(row) {
   Object.assign(adminEditForm, { id: row.id, nickname: row.nickname || '' })
   adminEditDialogVisible.value = true
 }
 
+/** 保存管理员资料修改。 */
 async function saveAdminEdit() {
   adminSaving.value = true
   try {
@@ -1138,6 +1178,7 @@ async function saveAdminEdit() {
   } finally { adminSaving.value = false }
 }
 
+/** 启用或禁用管理员账号。 */
 async function toggleAdminStatus(row) {
   const newStatus = row.status === 1 ? 0 : 1
   await updateAdminStatus(row.id, newStatus)
@@ -1145,6 +1186,7 @@ async function toggleAdminStatus(row) {
   loadAdmins()
 }
 
+/** 删除管理员账号。 */
 async function handleDeleteAdmin(row) {
   await ElMessageBox.confirm(`确认删除管理员「${row.username}」？`, '删除管理员', { type: 'warning' })
   await deleteAdmin(row.id)
@@ -1152,6 +1194,7 @@ async function handleDeleteAdmin(row) {
   loadAdmins()
 }
 
+/** 将管理员降级为普通用户。 */
 async function handleRevokeAdmin(row) {
   await ElMessageBox.confirm(`确认取消「${row.username}」的管理员权限？取消后该账号将变为普通用户。`, '取消管理员', { type: 'warning' })
   await updateUserRole(row.id, 'USER')
@@ -1160,10 +1203,12 @@ async function handleRevokeAdmin(row) {
 }
 
 // === 销售统计 ===
+/** 格式化金额展示。 */
 function formatAmount(v) {
   return Number(v || 0).toFixed(2)
 }
 
+/** 按统计周期和时间范围加载销售数据。 */
 async function loadSalesStats() {
   statsLoading.value = true
   try {
@@ -1181,6 +1226,7 @@ async function loadSalesStats() {
   } finally { statsLoading.value = false }
 }
 
+/** 初始化或刷新销售统计图表。 */
 function renderSalesCharts() {
   const pieBox = document.getElementById('salesPieBox')
   const barBox = document.getElementById('salesBarBox')
@@ -1192,6 +1238,7 @@ function renderSalesCharts() {
   initSalesBarChart(barBox)
 }
 
+/** 渲染销售汇总饼图。 */
 function initSalesPieChart(dom) {
   if (salesPieChart) salesPieChart.dispose()
   const byCategory = statsData.value?.byCategory || {}
@@ -1219,6 +1266,7 @@ function initSalesPieChart(dom) {
   })
 }
 
+/** 渲染销售明细柱状图。 */
 function initSalesBarChart(dom) {
   if (salesBarChart) salesBarChart.dispose()
   const bySeller = statsData.value?.bySeller || {}
@@ -1248,6 +1296,7 @@ function initSalesBarChart(dom) {
 }
 
 // 用户/商品/订单表格导出 Excel，便于离线统计
+/** 按类型导出用户、商品或订单 Excel。 */
 async function handleExport(kind) {
   const conf = {
     users: [exportUsers, '用户管理'],
@@ -1266,6 +1315,7 @@ async function handleExport(kind) {
   ElMessage.success('导出成功')
 }
 
+/** 导出销售明细 Excel。 */
 async function handleExportSales() {
   exporting.value = true
   try {
@@ -1287,6 +1337,7 @@ async function handleExportSales() {
   } finally { exporting.value = false }
 }
 
+/** 打开分类新增/编辑弹窗。 */
 function openCategoryDialog(row) {
   if (row) {
     Object.assign(categoryForm, { id: row.id, parentId: row.parentId || null, name: row.name, sort: row.sort })
@@ -1296,6 +1347,7 @@ function openCategoryDialog(row) {
   categoryDialogVisible.value = true
 }
 
+/** 保存分类新增或修改。 */
 async function saveCategoryForm() {
   if (!categoryForm.name.trim()) {
     ElMessage.warning('请输入分类名称')
@@ -1307,6 +1359,7 @@ async function saveCategoryForm() {
   loadCategories()
 }
 
+/** 删除空分类。 */
 async function handleDeleteCategory(id) {
   await ElMessageBox.confirm('确认删除该分类？', '提示', { type: 'warning' })
   await deleteCategory(id)
@@ -1315,35 +1368,42 @@ async function handleDeleteCategory(id) {
 }
 
 /* ---- 状态映射 ---- */
+/** 商品状态转中文标签。 */
 function productStatusText(s) {
   const map = { ON_SALE: '在售', SOLD: '已售', OFF_SHELF: '已下架' }
   return map[s] || s
 }
+/** 商品状态转标签颜色类型。 */
 function productStatusType(s) {
   const map = { ON_SALE: 'success', SOLD: 'info', OFF_SHELF: 'danger' }
   return map[s] || 'info'
 }
+/** 订单状态转中文标签。 */
 function orderStatusText(s) {
   const map = { PENDING: '待付款', PAID: '已付款', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消' }
   return map[s] || s
 }
+/** 订单状态转标签颜色类型。 */
 function orderStatusType(s) {
   const map = { PENDING: 'warning', PAID: 'primary', SHIPPED: 'success', COMPLETED: 'success', CANCELLED: 'info' }
   return map[s] || 'info'
 }
 
 // === 小黑屋 ===
+/** 格式化时间展示。 */
 function formatTime(t) {
   if (!t) return ''
   return t.replace('T', ' ').substring(0, 16)
 }
 
+/** 分页加载小黑屋用户。 */
 async function loadBlacklist() {
   const res = await getBlacklist({ pageNum: 1, pageSize: 50 })
   blacklistUsers.value = res.data.records
   blacklistTotal.value = res.data.total
 }
 
+/** 手动触发违规自动扫描。 */
 async function triggerScan() {
   scanning.value = true
   try {
@@ -1353,6 +1413,7 @@ async function triggerScan() {
   } finally { scanning.value = false }
 }
 
+/** 手动解除用户封禁。 */
 async function handleUnblacklist(userId) {
   await ElMessageBox.confirm('确认解封该用户？', '解封确认', { type: 'warning' })
   await unblacklistUser(userId)
@@ -1362,25 +1423,30 @@ async function handleUnblacklist(userId) {
 }
 
 // === 投诉/申诉 ===
+/** 投诉/申诉状态转中文标签。 */
 function reportStatusText(s) {
   const map = { PENDING: '待处理', RESOLVED: '已通过', DISMISSED: '已驳回', APPROVED: '已通过', REJECTED: '已驳回' }
   return map[s] || s
 }
+/** 投诉/申诉状态转标签颜色类型。 */
 function reportStatusType(s) {
   const map = { PENDING: 'warning', RESOLVED: 'success', DISMISSED: 'info', APPROVED: 'success', REJECTED: 'info' }
   return map[s] || 'info'
 }
 
+/** 分页加载用户投诉列表。 */
 async function loadComplaints() {
   const res = await getAdminComplaints({ pageNum: 1, pageSize: 50 })
   complaints.value = res.data.records
 }
 
+/** 分页加载用户申诉列表。 */
 async function loadAppeals() {
   const res = await getAdminAppeals({ pageNum: 1, pageSize: 50 })
   appeals.value = res.data.records
 }
 
+/** 处理投诉或申诉结果。 */
 async function handleReport(row, type, approve) {
   const action = approve ? '通过' : '驳回'
   await ElMessageBox.confirm(`确认${action}此${type === 'complaint' ? '投诉' : '申诉'}？`, `${action}确认`, { type: approve ? 'primary' : 'warning' })
@@ -1413,6 +1479,7 @@ watch(userSubTab, () => {
 })
 
 /** 按用户管理当前子分类加载对应数据 */
+/** 根据当前后台页签加载对应数据。 */
 function loadUserTabData() {
   if (userSubTab.value === 'admins') loadAdmins()
   else loadUsers()

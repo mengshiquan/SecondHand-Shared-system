@@ -24,6 +24,7 @@
 </template>
 
 <script setup>
+// 认证类页面背景：提供品牌化渐变和装饰层的视觉容器。
 // 马克笔三色：翠绿=主笔、暖橙=价签/点缀、靛蓝=呼应 logo 手心
 const G = 'var(--sh-primary)'
 const A = 'var(--sh-accent)'

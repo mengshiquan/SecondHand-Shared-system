@@ -36,6 +36,7 @@
 </template>
 
 <script setup>
+// 商品卡片：统一展示商品封面、价格、状态，并提供详情和加购入口。
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -61,10 +62,12 @@ const statusText = computed(() => {
   return map[props.product.status] || props.product.status
 })
 
+/** 跳转到商品详情页。 */
 function goDetail() {
   router.push(`/product/${props.product.id}`)
 }
 
+/** 将当前商品加入购物车。 */
 async function handleAddCart() {
   if (!userStore.isLoggedIn) { router.push('/login'); return }
   try {

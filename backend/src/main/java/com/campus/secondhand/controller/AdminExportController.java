@@ -47,6 +47,7 @@ public class AdminExportController {
     @Autowired
     private OrderMapper orderMapper;
 
+    /** 导出全部用户数据为 Excel。 */
     @GetMapping("/users")
     public void exportUsers(HttpServletResponse response) throws Exception {
         checkAdmin();
@@ -60,6 +61,7 @@ public class AdminExportController {
                 head("ID", "用户名", "昵称", "角色", "认证状态", "账号状态", "注册时间"), rows);
     }
 
+    /** 导出全部商品数据为 Excel，并带出分类和卖家名称。 */
     @GetMapping("/products")
     public void exportProducts(HttpServletResponse response) throws Exception {
         checkAdmin();
@@ -80,6 +82,7 @@ public class AdminExportController {
                 head("ID", "标题", "分类", "售价", "原价", "状态", "卖家", "浏览量", "发布时间"), rows);
     }
 
+    /** 导出全部订单数据为 Excel，并带出买家、卖家和状态中文说明。 */
     @GetMapping("/orders")
     public void exportOrders(HttpServletResponse response) throws Exception {
         checkAdmin();

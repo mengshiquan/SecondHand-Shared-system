@@ -7,4 +7,5 @@
 </template>
 
 <script setup>
+// 根组件只负责渲染路由视图；页面骨架由 Layout.vue 承担。
 </script>

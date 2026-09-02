@@ -309,6 +309,7 @@
 </template>
 
 <script setup>
+// 个人中心页：维护资料、密码、头像、收藏、地址、我的商品和账号注销。
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -353,6 +354,7 @@ const orderStats = computed(() => [
   { key: 'REFUND', label: '退款/售后', count: orderCounts.value.REFUND || 0 }
 ])
 
+/** 加载个人中心统计数据。 */
 async function loadOverview() {
   try {
     const [oc, cc] = await Promise.all([getOrderStatusCounts(), getCartList()])
@@ -373,8 +375,10 @@ const navItems = [
 
 const avatarUrl = computed(() => userInfo.value?.avatar || '')
 
+/** 打开系统文件选择器。 */
 function triggerUpload() { fileInput.value?.click() }
 
+/** 上传并更新头像。 */
 async function handleAvatarChange(e) {
   const file = e.target.files?.[0]
   if (!file) return
@@ -392,6 +396,7 @@ async function handleAvatarChange(e) {
 const profileForm = reactive({ nickname: '', phone: '', email: '' })
 const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 
+/** 加载个人中心所有基础数据。 */
 async function loadData() {
   userInfo.value = await userStore.fetchUserInfo()
   Object.assign(profileForm, { nickname: userInfo.value.nickname, phone: userInfo.value.phone, email: userInfo.value.email })
@@ -405,6 +410,7 @@ async function loadData() {
 const favoriteKeyword = ref('')
 const favSelected = ref([])
 
+/** 分页加载收藏商品。 */
 async function loadFavorites() {
   const favRes = await getFavoriteList({ pageNum: 1, pageSize: 20, keyword: favoriteKeyword.value || undefined })
   favorites.value = favRes.data.records
@@ -412,12 +418,14 @@ async function loadFavorites() {
   favSelected.value = favSelected.value.filter(id => favorites.value.some(p => p.id === id))
 }
 
+/** 切换收藏批量选择状态。 */
 function toggleFavSelect(id) {
   const idx = favSelected.value.indexOf(id)
   if (idx >= 0) favSelected.value.splice(idx, 1)
   else favSelected.value.push(id)
 }
 
+/** 批量取消选中的收藏。 */
 async function handleBatchUnfavorite() {
   await ElMessageBox.confirm(`确认取消收藏选中的 ${favSelected.value.length} 件商品？`, '提示', { type: 'warning' })
   await removeFavoriteBatch(favSelected.value)
@@ -438,11 +446,13 @@ const addressRules = {
   address: [{ required: true, message: '请输入详细地址', trigger: 'blur' }]
 }
 
+/** 加载收货地址列表。 */
 async function loadAddresses() {
   const res = await getAddressList()
   addresses.value = res.data
 }
 
+/** 打开地址新增/编辑弹窗。 */
 function openAddressDialog(row) {
   if (row) {
     Object.assign(addressForm, { id: row.id, receiverName: row.receiverName, phone: row.phone, address: row.address, isDefault: row.isDefault })
@@ -452,6 +462,7 @@ function openAddressDialog(row) {
   addressDialogVisible.value = true
 }
 
+/** 保存收货地址。 */
 async function saveAddress() {
   await addressFormRef.value.validate()
   addressSaving.value = true
@@ -467,6 +478,7 @@ async function saveAddress() {
   } finally { addressSaving.value = false }
 }
 
+/** 删除收货地址。 */
 async function handleDeleteAddress(id) {
   await ElMessageBox.confirm('确认删除该地址？', '提示', { type: 'warning' })
   await deleteAddress(id)
@@ -474,24 +486,28 @@ async function handleDeleteAddress(id) {
   loadAddresses()
 }
 
+/** 设置默认收货地址。 */
 async function handleSetDefault(id) {
   await setDefaultAddress(id)
   ElMessage.success('已设为默认地址')
   loadAddresses()
 }
 
+/** 分页加载我发布的商品。 */
 async function loadMyProducts() {
   const res = await getMyProducts({ pageNum: myPage.value, pageSize: 8 })
   myProducts.value = res.data.records
   myTotal.value = res.data.total
 }
 
+/** 保存个人资料。 */
 async function saveProfile() {
   await updateProfile(profileForm)
   ElMessage.success('保存成功')
   loadData()
 }
 
+/** 校验旧密码并修改登录密码。 */
 async function changePassword() {
   if (!pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmPassword) {
     ElMessage.warning('请填写完整')
@@ -512,12 +528,14 @@ async function changePassword() {
   pwdForm.confirmPassword = ''
 }
 
+/** 下架我发布的商品。 */
 async function handleOffShelf(id) {
   await offShelfProduct(id)
   ElMessage.success('已下架')
   loadMyProducts()
 }
 
+/** 删除我发布的商品。 */
 async function handleDelete(id) {
   await ElMessageBox.confirm('确认删除该商品？', '提示', { type: 'warning' })
   await deleteProduct(id)
@@ -529,6 +547,7 @@ const showDeactivateDialog = ref(false)
 const deactivatePassword = ref('')
 const deactivating = ref(false)
 
+/** 校验密码并注销当前账号。 */
 async function handleDeactivate() {
   if (!deactivatePassword.value) { ElMessage.warning('请输入密码'); return }
   deactivating.value = true

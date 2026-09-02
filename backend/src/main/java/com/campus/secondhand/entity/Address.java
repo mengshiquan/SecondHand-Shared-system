@@ -15,6 +15,7 @@ public class Address {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    /** 所属用户ID */
     private Long userId;
 
     /** 收货人姓名 */
@@ -32,9 +33,11 @@ public class Address {
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    /** 逻辑删除标记：0-未删除 1-已删除 */
     @TableLogic
     private Integer deleted;
 }

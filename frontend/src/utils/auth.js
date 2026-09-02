@@ -11,6 +11,7 @@ export function getToken() {
   return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY)
 }
 
+/** 读取登录用户信息；会话级存储优先于“记住我”兜底存储。 */
 export function getUser() {
   const raw = sessionStorage.getItem(USER_KEY) || localStorage.getItem(USER_KEY)
   return raw ? JSON.parse(raw) : null
@@ -33,6 +34,7 @@ export function setAuth(token, user, remember) {
   }
 }
 
+/** 清空会话级和持久化的全部登录态。 */
 export function clearAuth() {
   sessionStorage.removeItem(TOKEN_KEY)
   sessionStorage.removeItem(USER_KEY)

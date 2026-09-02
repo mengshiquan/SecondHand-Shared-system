@@ -33,10 +33,10 @@ public class User {
     /** 邮箱 */
     private String email;
 
-    /** 角色：USER / ADMIN */
+    /** 角色：USER / ADMIN / SUPER_ADMIN */
     private String role;
 
-    /** 状态：0-禁用 1-正常 */
+    /** 状态：0-禁用 1-正常 2-已注销 */
     private Integer status;
 
     /** 小黑屋状态：NULL/AUTO/MANUAL */
@@ -60,12 +60,15 @@ public class User {
     /** 认证状态：PENDING/APPROVED/REJECTED */
     private String verifyStatus;
 
+    /** 创建时间 */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
+    /** 更新时间 */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
+    /** 逻辑删除标记：0-未删除 1-已删除 */
     @TableLogic
     private Integer deleted;
 }

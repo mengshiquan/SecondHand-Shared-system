@@ -145,6 +145,7 @@
 </template>
 
 <script setup>
+// 登录/注册页动态角色动画：集中管理角色位移、目光、眨眼和成功庆祝效果。
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import EyeBall from './EyeBall.vue'
 import Pupil from './Pupil.vue'
@@ -200,6 +201,7 @@ const confettiStyles = ref([])
 const showConfetti = ref(false)
 let confettiTimeout = null
 
+/** 登录成功时生成庆祝彩带的样式数据。 */
 const generateConfetti = () => {
   confettiStyles.value = Array.from({ length: 180 }, (_, i) => {
     const color = confettiColors[i % confettiColors.length]
@@ -226,12 +228,14 @@ const generateConfetti = () => {
 const successLookY = ref(-5)
 let successLookAnimId = null
 
+/** 登录成功后让角色短暂看向用户，强化成功反馈。 */
 const animateSuccessLook = () => {
   const startY = -5
   const endY = 4
   const duration = 5500
   const startTime = performance.now()
 
+  // requestAnimationFrame 回调：按时间插值控制角色目光过渡。
   const step = (now) => {
     const elapsed = now - startTime
     const progress = Math.min(elapsed / duration, 1)
@@ -272,6 +276,7 @@ const characterCenters = ref({
   yellow: { x: 0, y: 0 }
 })
 
+/** 读取各角色 DOM 中心点，作为眼睛跟随动画的基准。 */
 const updateCharacterCenters = () => {
   if (purpleRef.value) {
     const rect = purpleRef.value.getBoundingClientRect()
@@ -291,6 +296,7 @@ const updateCharacterCenters = () => {
   }
 }
 
+/** 根据鼠标位置和角色中心点计算眼睛偏移与身体倾斜。 */
 const calculatePosition = (centerX, centerY, mx, my, rangeX = 15, rangeY = 10, minX = null, maxX = null, minY = null, maxY = null) => {
   const rMinX = minX !== null ? minX : -rangeX
   const rMaxX = maxX !== null ? maxX : rangeX
@@ -314,6 +320,7 @@ let pendingMouseX = 0
 let pendingMouseY = 0
 let needsUpdate = false
 
+/** 将鼠标位置同步到所有角色的眼睛和身体姿态。 */
 const updatePositions = () => {
   if (needsUpdate && hasEntered.value) {
     needsUpdate = false
@@ -329,12 +336,14 @@ const updatePositions = () => {
   rafId = requestAnimationFrame(updatePositions)
 }
 
+/** 记录最新鼠标坐标并触发位置更新。 */
 const handleMouseMove = (e) => {
   pendingMouseX = e.clientX
   pendingMouseY = e.clientY
   needsUpdate = true
 }
 
+/** 随机安排紫色角色眨眼，营造自然动画。 */
 const schedulePurpleBlink = () => {
   const interval = Math.random() * 4000 + 3000
   purpleBlinkTimeout = setTimeout(() => {
@@ -346,6 +355,7 @@ const schedulePurpleBlink = () => {
   }, interval)
 }
 
+/** 随机安排黑色角色眨眼，营造自然动画。 */
 const scheduleBlackBlink = () => {
   const interval = Math.random() * 4000 + 3000
   blackBlinkTimeout = setTimeout(() => {
@@ -357,6 +367,7 @@ const scheduleBlackBlink = () => {
   }, interval)
 }
 
+/** 随机安排橙色角色眨眼，营造自然动画。 */
 const scheduleOrangeBlink = () => {
   const interval = Math.random() * 4000 + 3000
   orangeBlinkTimeout = setTimeout(() => {
@@ -368,6 +379,7 @@ const scheduleOrangeBlink = () => {
   }, interval)
 }
 
+/** 随机安排黄色角色眨眼，营造自然动画。 */
 const scheduleYellowBlink = () => {
   const interval = Math.random() * 4000 + 3000
   yellowBlinkTimeout = setTimeout(() => {

@@ -154,6 +154,7 @@
 </template>
 
 <script setup>
+// 首页：展示轮播提醒、分类导航、推荐商品和登录后快捷入口。
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { getProductList } from '@/api/product'
@@ -187,6 +188,7 @@ const showReminders = computed(() => {
   return todoTotal.value + unreadCount.value > 0
 })
 
+/** 根据登录状态加载待付款、待发货等首页提醒。 */
 async function loadReminders() {
   if (!userStore.isLoggedIn) return
   try {
@@ -207,6 +209,7 @@ const catEmoji = {
   '其他闲置': '🎁'
 }
 
+/** 返回分类对应的展示图标。 */
 function getCatEmoji(name) {
   return catEmoji[name] || '📌'
 }
@@ -218,6 +221,7 @@ const slideThemes = [
   { theme: 'slide-rose' }
 ]
 /** 分类轮播插画映射：3D 黏土风背景图 */
+/** 返回分类卡片的品牌配色。 */
 function catBg(name) {
   if (/数码|电子|手机|电脑/.test(name)) return '/banners/digital.png'
   if (/图书|教材|书/.test(name)) return '/banners/books.png'
@@ -256,6 +260,7 @@ const slides = computed(() => {
   return list
 })
 
+/** 跳转到轮播提醒对应页面。 */
 function goSlide(slide) {
   router.push(slide.to)
 }
@@ -268,6 +273,7 @@ const greeting = computed(() => {
   return '晚上好 🌙'
 })
 
+/** 加载首页推荐商品。 */
 async function loadProducts() {
   loading.value = true
   try {

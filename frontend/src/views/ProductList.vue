@@ -120,6 +120,7 @@
 </template>
 
 <script setup>
+// 商品列表页：支持分类筛选、关键字搜索、排序、分页和快捷加购。
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -161,14 +162,17 @@ const currentMainName = computed(
   () => mainCategories.value.find(c => c.id === selectedMain.value)?.name || ''
 )
 
+/** 取商品第一张图作为列表封面。 */
 function firstImage(item) {
   return Array.isArray(item.images) && item.images.length ? item.images[0] : ''
 }
+/** 商品状态转中文标签。 */
 function statusText(item) {
   const map = { ON_SALE: '在售', SOLD: '已售', OFF_SHELF: '下架' }
   return map[item.status] || item.status
 }
 
+/** 按当前筛选、排序和分页条件加载商品。 */
 async function loadData() {
   loading.value = true
   try {
@@ -180,6 +184,7 @@ async function loadData() {
   }
 }
 
+/** 选择一级分类并清空二级分类。 */
 async function selectMain(mainId) {
   selectedMain.value = mainId
   query.categoryId = null
@@ -194,6 +199,7 @@ async function selectMain(mainId) {
   loadData()
 }
 
+/** 选择二级分类。 */
 function selectSub(subId) {
   if (subId) {
     query.categoryId = subId
@@ -206,6 +212,7 @@ function selectSub(subId) {
   loadData()
 }
 
+/** 设置列表排序方式。 */
 function setSort(s) {
   sort.value = s
   query.sortBy = s === 'default' ? null : s
@@ -213,10 +220,12 @@ function setSort(s) {
   loadData()
 }
 
+/** 切换价格升序/降序。 */
 function togglePrice() {
   setSort(sort.value === 'price_asc' ? 'price_desc' : 'price_asc')
 }
 
+/** 将列表中的商品加入购物车。 */
 async function handleAddCart(item) {
   if (!userStore.isLoggedIn) { router.push('/login'); return }
   try {

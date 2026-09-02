@@ -36,6 +36,7 @@
 </template>
 
 <script setup>
+// 通知中心页：加载、已读、删除和清空当前用户通知。
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Bell } from '@element-plus/icons-vue'
@@ -44,6 +45,7 @@ import { getNotificationList, getUnreadCount, markRead, markAllRead, deleteNotif
 const notifications = ref([])
 const unreadCount = ref(0)
 
+/** 分页加载通知列表。 */
 async function load() {
   const [listRes, countRes] = await Promise.all([
     getNotificationList({ pageNum: 1, pageSize: 50 }),
@@ -53,6 +55,7 @@ async function load() {
   unreadCount.value = countRes.data.count
 }
 
+/** 标记单条通知为已读。 */
 async function handleRead(n) {
   if (!n.isRead) {
     await markRead(n.id)
@@ -61,18 +64,21 @@ async function handleRead(n) {
   }
 }
 
+/** 标记全部通知为已读。 */
 async function handleMarkAll() {
   await markAllRead()
   ElMessage.success('已全部标为已读')
   load()
 }
 
+/** 删除单条通知。 */
 async function handleDelete(id) {
   await deleteNotification(id)
   ElMessage.success('已删除')
   load()
 }
 
+/** 清空所有已读通知。 */
 async function handleClear() {
   await ElMessageBox.confirm('确认清空所有已读通知？', '确认', { type: 'warning' })
   await clearRead()

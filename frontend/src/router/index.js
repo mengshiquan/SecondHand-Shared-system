@@ -2,6 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getToken } from '@/utils/auth'
 import { useUserStore } from '@/stores/user'
 
+/**
+ * 路由表：
+ * - guest：已登录用户也可访问，用于切换账号；
+ * - requiresAuth：必须携带有效登录态；
+ * - requiresAdmin：在 requiresAuth 基础上再校验管理员角色。
+ */
 const routes = [
   {
     path: '/login',
@@ -46,11 +52,13 @@ router.beforeEach((to, from, next) => {
   const token = getToken()
   const userStore = useUserStore()
 
+  // 未登录访问受保护页面时，先记录目标地址，登录成功后回跳。
   if (to.meta.requiresAuth && !token) {
     next({ path: '/login', query: { redirect: to.fullPath } })
     return
   }
 
+  // 普通用户访问后台路由时直接回到首页，避免暴露后台入口数据。
   if (to.meta.requiresAdmin && !userStore.isAdmin) {
     next('/')
     return

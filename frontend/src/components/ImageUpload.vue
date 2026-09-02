@@ -19,6 +19,7 @@
 </template>
 
 <script setup>
+// 图片上传组件：封装文件上传、预览、删除和上传中的状态反馈。
 import { ref, watch } from 'vue'
 import { uploadFile } from '@/api/file'
 import { ElMessage } from 'element-plus'
@@ -45,6 +46,7 @@ watch(
   { immediate: true }
 )
 
+/** 上传新图片并同步更新 v-model 的 URL 列表。 */
 async function handleUpload({ file }) {
   try {
     const res = await uploadFile(file)
@@ -56,11 +58,13 @@ async function handleUpload({ file }) {
   }
 }
 
+/** 从图片列表中移除指定图片。 */
 function handleRemove(file) {
   const urls = props.modelValue.filter((url) => url !== file.url)
   emit('update:modelValue', urls)
 }
 
+/** 打开大图预览。 */
 function handlePreview(file) {
   previewUrl.value = file.url
   previewVisible.value = true

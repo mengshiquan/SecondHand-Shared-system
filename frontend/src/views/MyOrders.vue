@@ -152,6 +152,7 @@
 </template>
 
 <script setup>
+// 订单中心页：展示买卖订单，处理支付、发货、收货、退款仲裁和取消。
 import { ref, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -206,15 +207,23 @@ const refundTypeMap = {
   ARBITRATION_MAINTAIN: 'info'
 }
 
+/** 订单状态转中文标签。 */
 function statusText(s) { return statusMap[s] || s }
+/** 订单状态转标签颜色类型。 */
 function statusType(s) { return statusTypeMap[s] || '' }
+/** 退款状态转中文标签。 */
 function refundText(s) { return s && s !== 'NONE' ? (refundStatusMap[s] || s) : '' }
+/** 退款状态转标签颜色类型。 */
 function refundType(s) { return refundTypeMap[s] || 'warning' }
+/** 判断当前用户是否是订单买家。 */
 function isBuyer(o) { return o.buyerId === userStore.userInfo?.userId }
+/** 判断当前用户是否是订单卖家。 */
 function isSeller(o) { return o.sellerId === userStore.userInfo?.userId }
 // 退款进行中（待处理/仲裁中）：订单正常流转按钮与状态标签让位于退款处理
+/** 判断订单退款流程是否仍在进行。 */
 function refundActive(o) { return o.refundStatus === 'REQUESTED' || o.refundStatus === 'ARBITRATION' }
 
+/** 计算待付款订单剩余时间。 */
 function countdown(expireTime) {
   if (!expireTime) return ''
   const remain = new Date(expireTime).getTime() - Date.now()
@@ -224,6 +233,7 @@ function countdown(expireTime) {
   return `剩余 ${m}:${String(s).padStart(2, '0')}`
 }
 
+/** 按页签和筛选条件加载订单。 */
 async function loadData() {
   const res = await getOrderList({
     pageNum: pageNum.value,
@@ -234,6 +244,7 @@ async function loadData() {
   total.value = res.data.total
 }
 
+/** 加载各订单状态角标数量。 */
 async function loadAllCounts() {
   // 单接口取三个状态的计数；角标持续提醒直至订单完成/取消后自然消失
   try {
@@ -248,15 +259,18 @@ async function loadAllCounts() {
 const payVisible = ref(false)
 const payingOrder = ref(null)
 
+/** 打开支付弹窗并记录待支付订单。 */
 function handlePay(order) {
   payingOrder.value = order
   payVisible.value = true
 }
 
+/** 支付成功后刷新订单和角标。 */
 function onPaid() {
   loadData(); loadAllCounts()
 }
 
+/** 取消待付款订单。 */
 async function handleCancel(id) {
   await ElMessageBox.confirm('确认取消订单？商品将重新上架。', '取消订单', { type: 'warning' })
   await cancelOrder(id)
@@ -264,6 +278,7 @@ async function handleCancel(id) {
   loadData(); loadAllCounts()
 }
 
+/** 打开退款申请弹窗。 */
 async function handleApplyRefund(id) {
   refundOrderId.value = id
   refundForm.category = ''
@@ -271,6 +286,7 @@ async function handleApplyRefund(id) {
   refundDialogVisible.value = true
 }
 
+/** 提交退款原因。 */
 async function submitRefund() {
   if (!refundForm.category) { ElMessage.warning('请选择退款原因'); return }
   if (refundForm.category === '其他原因' && !refundForm.custom.trim()) {
@@ -289,6 +305,7 @@ async function submitRefund() {
   } finally { refundSubmitting.value = false }
 }
 
+/** 卖家同意或拒绝退款。 */
 async function handleRefundAction(id, agree) {
   await ElMessageBox.confirm(agree ? '确认同意退款？订单将取消，商品恢复在售。' : '确认拒绝买家的退款申请？', '处理退款', { type: 'warning' })
   await handleRefund(id, agree)
@@ -296,6 +313,7 @@ async function handleRefundAction(id, agree) {
   loadData()
 }
 
+/** 买家申请平台仲裁。 */
 async function handleArbitration(id) {
   await ElMessageBox.confirm('卖家已拒绝退款，确认申请平台仲裁？管理员将介入处理。', '申请仲裁', { type: 'warning' })
   await applyArbitration(id)
@@ -303,6 +321,7 @@ async function handleArbitration(id) {
   loadData()
 }
 
+/** 删除已完成或已取消订单。 */
 async function handleDeleteOrder(id) {
   await ElMessageBox.confirm('确认删除该订单？删除后将不再显示。', '删除订单', { type: 'warning' })
   await deleteOrder(id)
@@ -310,6 +329,7 @@ async function handleDeleteOrder(id) {
   loadData(); loadAllCounts()
 }
 
+/** 通用更新订单状态入口。 */
 async function updateStatus(id, newStatus) {
   await updateOrderStatus(id, newStatus)
   ElMessage.success('操作成功')

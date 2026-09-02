@@ -274,6 +274,7 @@
 </template>
 
 <script setup>
+// 商品详情页：加载商品信息，处理收藏、加购、立即购买、咨询和评价。
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'

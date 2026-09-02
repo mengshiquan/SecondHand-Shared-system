@@ -145,6 +145,7 @@ public class AdminController {
 
     // === 投诉 ===
 
+    /** 分页查询用户投诉，支持处理状态筛选。 */
     @GetMapping("/complaints")
     public Result<IPage<Complaint>> complaints(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -153,6 +154,7 @@ public class AdminController {
         return Result.success(adminService.complaintPage(pageNum, pageSize, status));
     }
 
+    /** 处理投诉：approve=true 表示投诉成立并触发账号限制，false 表示驳回。 */
     @PutMapping("/complaints/{id}/handle")
     public Result<Void> handleComplaint(@PathVariable Long id, @RequestBody Map<String, Object> params) {
         adminService.handleComplaint(id,
@@ -163,6 +165,7 @@ public class AdminController {
 
     // === 申诉 ===
 
+    /** 分页查询用户申诉，支持处理状态筛选。 */
     @GetMapping("/appeals")
     public Result<IPage<Appeal>> appeals(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -171,6 +174,7 @@ public class AdminController {
         return Result.success(adminService.appealPage(pageNum, pageSize, status));
     }
 
+    /** 处理申诉：approve=true 解除小黑屋，false 维持账号限制。 */
     @PutMapping("/appeals/{id}/handle")
     public Result<Void> handleAppeal(@PathVariable Long id, @RequestBody Map<String, Object> params) {
         adminService.handleAppeal(id,
@@ -218,12 +222,14 @@ public class AdminController {
 
     // ===== 管理员管理（仅超级管理员） =====
 
+    /** 分页查询管理员列表；普通管理员可读，写操作仅超级管理员可用。 */
     @GetMapping("/admins")
     public Result<IPage<User>> admins(@RequestParam(defaultValue = "1") Integer pageNum,
                                       @RequestParam(defaultValue = "10") Integer pageSize) {
         return Result.success(adminService.adminPage(pageNum, pageSize));
     }
 
+    /** 创建管理员账号，返回一次性的初始明文密码。 */
     @PostMapping("/admins")
     public Result<Map<String, String>> createAdmin(@RequestBody Map<String, String> params) {
         String password = adminService.createAdmin(params.get("username"), params.get("nickname"));
@@ -232,18 +238,21 @@ public class AdminController {
         return Result.success(result);
     }
 
+    /** 更新管理员昵称。 */
     @PutMapping("/admins/{id}")
     public Result<Void> updateAdmin(@PathVariable Long id, @RequestBody Map<String, String> params) {
         adminService.updateAdmin(id, params.get("nickname"));
         return Result.success();
     }
 
+    /** 删除管理员；超级管理员和当前登录账号不可删除。 */
     @DeleteMapping("/admins/{id}")
     public Result<Void> deleteAdmin(@PathVariable Long id) {
         adminService.deleteAdmin(id);
         return Result.success();
     }
 
+    /** 启用或禁用管理员；超级管理员和当前登录账号不可禁用。 */
     @PutMapping("/admins/{id}/status")
     public Result<Void> updateAdminStatus(@PathVariable Long id, @RequestBody Map<String, Integer> params) {
         adminService.updateAdminStatus(id, params.get("status"));
@@ -252,6 +261,7 @@ public class AdminController {
 
     // ===== 用户管理补全 =====
 
+    /** 后台创建普通用户或管理员，校园认证直接通过。 */
     @PostMapping("/users")
     public Result<Void> createUser(@RequestBody Map<String, String> params) {
         adminService.createUser(params.get("username"), params.get("password"),
@@ -259,18 +269,21 @@ public class AdminController {
         return Result.success();
     }
 
+    /** 后台更新用户昵称、手机号和邮箱。 */
     @PutMapping("/users/{id}")
     public Result<Void> updateUser(@PathVariable Long id, @RequestBody Map<String, String> params) {
         adminService.updateUser(id, params.get("nickname"), params.get("phone"), params.get("email"));
         return Result.success();
     }
 
+    /** 级联清理并删除用户；超级管理员和当前登录账号不可删除。 */
     @DeleteMapping("/users/{id}")
     public Result<Void> deleteUser(@PathVariable Long id) {
         adminService.deleteUser(id);
         return Result.success();
     }
 
+    /** 重置用户密码；请求体留空时生成随机密码，返回明文供管理员告知用户。 */
     @PutMapping("/users/{id}/reset-password")
     public Result<String> resetPassword(@PathVariable Long id, @RequestBody(required = false) Map<String, String> params) {
         String newPassword = params != null ? params.get("newPassword") : null;

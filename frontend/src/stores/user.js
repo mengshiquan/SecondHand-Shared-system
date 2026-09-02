@@ -7,6 +7,7 @@ export const useUserStore = defineStore('user', () => {
   const token = ref(getToken() || '')
   const userInfo = ref(getUser())
 
+  // 登录状态只依赖 Token；角色判断供路由守卫和页面展示使用。
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => userInfo.value?.role === 'ADMIN' || userInfo.value?.role === 'SUPER_ADMIN')
 
@@ -36,6 +37,7 @@ export const useUserStore = defineStore('user', () => {
     return res.data
   }
 
+  /** 退出登录并清空当前标签页及“记住我”兜底登录态。 */
   function logout() {
     token.value = ''
     userInfo.value = null

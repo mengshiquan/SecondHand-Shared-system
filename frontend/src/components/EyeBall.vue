@@ -25,6 +25,7 @@
 </template>
 
 <script setup>
+// 眼球装饰组件：让眼睛跟随鼠标移动，增强登录页互动感。
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
@@ -74,6 +75,7 @@ const eyeRef = ref(null)
 const mouseX = ref(0)
 const mouseY = ref(0)
 
+/** 记录鼠标坐标，用于瞳孔跟随。 */
 const handleMouseMove = (e) => {
   mouseX.value = e.clientX
   mouseY.value = e.clientY

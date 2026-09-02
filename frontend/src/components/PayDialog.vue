@@ -57,6 +57,7 @@
 </template>
 
 <script setup>
+// 支付弹窗：选择渠道、展示二维码、轮询支付状态并处理模拟扫码。
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheck } from '@element-plus/icons-vue'
@@ -86,6 +87,7 @@ watch(() => props.visible, (v) => {
   if (v) reset()
 })
 
+/** 选择支付渠道并创建支付单。 */
 async function choose(ch) {
   if (creating.value) return
   creating.value = true
@@ -102,6 +104,7 @@ async function choose(ch) {
   }
 }
 
+/** 启动支付状态轮询。 */
 function startPoll() {
   stopPoll()
   pollTimer = setInterval(async () => {
@@ -116,6 +119,7 @@ function startPoll() {
   }, 3000)
 }
 
+/** 停止支付状态轮询。 */
 function stopPoll() {
   if (pollTimer) {
     clearInterval(pollTimer)
@@ -123,6 +127,7 @@ function stopPoll() {
   }
 }
 
+/** 演示环境下模拟用户扫码完成微信支付。 */
 async function simulateScan() {
   simulating.value = true
   try {
@@ -135,11 +140,13 @@ async function simulateScan() {
   }
 }
 
+/** 返回支付渠道选择。 */
 function backToSelect() {
   stopPoll()
   step.value = 'select'
 }
 
+/** 关闭时清理二维码、轮询和内部状态。 */
 function reset() {
   stopPoll()
   step.value = 'select'
@@ -147,6 +154,7 @@ function reset() {
   qrUrl.value = ''
 }
 
+/** 标记支付成功并通知父页面刷新订单。 */
 function finish() {
   emit('update:visible', false)
   reset()

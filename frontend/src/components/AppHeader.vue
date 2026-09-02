@@ -307,6 +307,7 @@
 </template>
 
 <script setup>
+// 全局顶部导航：维护搜索、用户信息、后台入口、通知中心和账号封禁提示。
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search, ArrowDown, InfoFilled, ChatDotRound, ChatLineSquare, QuestionFilled, Message, Clock, WarningFilled, EditPen, Bell, Menu, Close, HomeFilled, Goods, User, Document, Setting, SwitchButton, ShoppingCart, Star, Location } from '@element-plus/icons-vue'
@@ -351,6 +352,7 @@ const badgeCount = computed(() => notifyTotal.value + userUnreadCount.value)
 const pendingOrderCount = ref(0)
 const cartCount = ref(0)
 
+/** 拉取当前用户的订单角标、购物车数量和未读聊天消息。 */
 async function loadUserNotifications() {
   try {
     const [listRes, countRes, orderRes, cartRes] = await Promise.all([
@@ -366,6 +368,7 @@ async function loadUserNotifications() {
   } catch {}
 }
 
+/** 拉取管理员待处理事项和个人通知数量。 */
 async function loadNotifications() {
   if (!userStore.isAdmin) return
   try {
@@ -381,25 +384,30 @@ function refreshNotifications() {
   if (userStore.isLoggedIn) loadUserNotifications()
 }
 
+/** 跳转到后台指定页签。 */
 function goAdminTab(tab) {
   sessionStorage.setItem('adminTab', tab)
 }
 
+/** 跳转到通知中心。 */
 function goNotifications() {
   document.body.click() // 关闭 popover
   router.push('/notifications')
 }
 
+/** 手动收起通知下拉面板。 */
 function dismissNotifications() {
   notifyTotal.value = 0
   Object.assign(notify, { pendingComplaints: 0, pendingAppeals: 0, blacklistCount: 0, pendingArbitrations: 0, total: 0 })
 }
 
+/** 格式化小黑屋解封时间。 */
 function formatUntil(d) {
   if (!d) return ''
   return d.replace('T', ' ').substring(0, 16)
 }
 
+/** 登录后检查账号是否处于小黑屋。 */
 async function checkBlacklist() {
   if (!userStore.isLoggedIn) return
   try {
@@ -409,6 +417,7 @@ async function checkBlacklist() {
   } catch { blacklisted.value = false }
 }
 
+/** 提交账号封禁申诉。 */
 async function submitAppealHandler() {
   if (!appealReason.value.trim()) {
     ElMessage.warning('请输入申诉理由')
@@ -432,10 +441,12 @@ onMounted(() => {
 
 onBeforeUnmount(() => clearInterval(notifyTimer))
 
+/** 将关键字写入商品列表查询参数并跳转。 */
 function handleSearch() {
   router.push({ path: '/products', query: { keyword: keyword.value } })
 }
 
+/** 退出登录并回到登录页。 */
 function handleLogout() {
   chatStore.disconnect()
   userStore.logout()

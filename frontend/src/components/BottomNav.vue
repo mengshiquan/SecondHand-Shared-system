@@ -35,6 +35,7 @@
 </template>
 
 <script setup>
+// 移动端底部导航：按登录状态和当前路由渲染常用入口。
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { HomeFilled, Goods, User, Plus, Bell } from '@element-plus/icons-vue'

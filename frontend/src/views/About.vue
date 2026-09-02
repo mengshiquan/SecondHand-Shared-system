@@ -68,6 +68,7 @@
 </template>
 
 <script setup>
+// 平台介绍页：说明校园二手共享的定位、特色和保障。
 import { Shop, UserFilled, Checked } from '@element-plus/icons-vue'
 </script>
 

@@ -68,6 +68,7 @@
 </template>
 
 <script setup>
+// 登录页：处理账号密码、图形验证码、记住我和登录后的回跳。
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'

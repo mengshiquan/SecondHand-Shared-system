@@ -109,6 +109,7 @@
 </template>
 
 <script setup>
+// 聊天页：维护会话列表、历史消息、发送与未读状态，并通过 WebSocket 实时刷新。
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'

@@ -12,6 +12,7 @@
 </template>
 
 <script setup>
+// 单只眼睛瞳孔组件：根据鼠标位置计算偏移，供眼球动画复用。
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
@@ -45,6 +46,7 @@ const pupilRef = ref(null)
 const mouseX = ref(0)
 const mouseY = ref(0)
 
+/** 记录鼠标坐标，用于计算瞳孔偏移。 */
 const handleMouseMove = (e) => {
   mouseX.value = e.clientX
   mouseY.value = e.clientY

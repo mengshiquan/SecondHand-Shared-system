@@ -10,6 +10,7 @@
 </template>
 
 <script setup>
+// 商品骨架屏：在列表加载时保持布局稳定，减少页面跳动。
 </script>
 
 <style scoped>

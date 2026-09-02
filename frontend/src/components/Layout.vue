@@ -12,6 +12,7 @@
 </template>
 
 <script setup>
+// 基础布局：组合顶部导航、底部导航和路由页面容器。
 import AppHeader from './AppHeader.vue'
 import BottomNav from './BottomNav.vue'
 </script>

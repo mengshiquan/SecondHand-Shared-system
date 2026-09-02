@@ -36,6 +36,7 @@
 </template>
 
 <script setup>
+// 分类选择器：支持一级分类展开、二级分类选择，并把结果同步给发布页。
 import { ref, watch, onMounted } from 'vue'
 import { getCategoryTree } from '@/api/category'
 
@@ -59,10 +60,12 @@ const catEmoji = {
   '其他闲置': '📦', '玩具/玩偶': '🧸', '礼品/工艺品': '🎁', '票券/卡券': '🎫', '其他': '📌'
 }
 
+/** 根据分类名匹配展示图标。 */
 function getEmoji(name) {
   return catEmoji[name] || '📌'
 }
 
+/** 处理当前层级分类选中，并把叶子分类回传给父组件。 */
 function handleSelect(item) {
   if (item.children && item.children.length > 0) {
     // 有子分类：钻入下一级
@@ -74,6 +77,7 @@ function handleSelect(item) {
   }
 }
 
+/** 返回上一级分类。 */
 function goBack() {
   if (breadcrumb.value.length === 0) return
   const prev = breadcrumb.value.pop()
@@ -94,6 +98,7 @@ function goBack() {
   }
 }
 
+/** 按选中路径恢复分类层级和当前选项。 */
 function findAndSetOptions(nodes, path) {
   let current = nodes
   for (const crumb of path) {
@@ -153,6 +158,7 @@ function navigateToSelection(nodes, path) {
   }
 }
 
+/** 递归查找指定二级分类并恢复路径。 */
 function navigateToSub(nodes, path) {
   for (const node of nodes) {
     if (node.id === props.modelValue) {
@@ -167,6 +173,7 @@ function navigateToSub(nodes, path) {
   return false
 }
 
+/** 递归查找叶子分类，用于编辑商品时回显完整路径。 */
 function findLeaf(nodes, path) {
   for (const node of nodes) {
     if (node.id === props.modelValue) return path

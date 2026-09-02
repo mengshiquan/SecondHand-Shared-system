@@ -16,7 +16,7 @@ public class Order {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 订单编号 */
+    /** 订单编号，用于对外展示和支付回调定位 */
     private String orderNo;
 
     /** 商品ID */
