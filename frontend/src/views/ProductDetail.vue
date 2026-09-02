@@ -80,11 +80,24 @@
             </div>
 
             <div class="desc-card">
-              <div class="desc-label">
-                <el-icon :size="16"><Document /></el-icon>
-                <span>商品描述</span>
+              <span class="desc-tape" aria-hidden="true"></span>
+              <div class="desc-head">
+                <span class="desc-head-icon"><el-icon :size="15"><Document /></el-icon></span>
+                <span class="desc-head-title">商品描述</span>
+                <span v-if="product.description" class="desc-count">{{ product.description.length }} 字</span>
               </div>
-              <p>{{ product.description }}</p>
+              <div
+                v-if="product.description"
+                class="desc-body"
+                :class="{ 'is-clamped': descClamped, 'has-fade': descClamped && descOverflow }"
+              >
+                <div ref="descContentRef" class="desc-content" v-html="renderedDescription"></div>
+              </div>
+              <p v-else class="desc-empty">卖家还没有填写商品描述</p>
+              <button v-if="descOverflow" class="desc-toggle" @click="toggleDesc">
+                <span>{{ descClamped ? '展开全部' : '收起' }}</span>
+                <el-icon :size="14"><ArrowDown v-if="descClamped" /><ArrowUp v-else /></el-icon>
+              </button>
             </div>
 
             <div class="seller-card">
@@ -288,10 +301,10 @@
 
 <script setup>
 // 商品详情页：加载商品信息，处理收藏、加购、立即购买、咨询和评价。
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, Document, Share, ChatDotRound, InfoFilled, WarningFilled, ShoppingCart, Location } from '@element-plus/icons-vue'
+import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Document, Share, ChatDotRound, InfoFilled, WarningFilled, ShoppingCart, Location } from '@element-plus/icons-vue'
 import { getProductDetail, getProductList } from '@/api/product'
 import { createOrder } from '@/api/order'
 import { addToCart } from '@/api/cart'
@@ -341,6 +354,47 @@ const statusText = computed(() => {
   return map[product.value?.status] || ''
 })
 
+// ====== 商品描述：换行渲染 + 高度折叠 ======
+const descClamped = ref(true)      // 是否处于折叠（限高）状态
+const descOverflow = ref(false)    // 内容是否超出折叠高度（决定按钮/渐隐显隐）
+const descContentRef = ref(null)   // 描述正文 DOM，用于测量是否超高
+
+/**
+ * 转义 HTML 特殊字符，防止卖家描述中的标签/脚本经 v-html 注入（XSS）
+ * @param {string} str 原始文本
+ * @returns {string} 转义后文本
+ */
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * 渲染用描述 HTML：先转义 HTML，再把换行符（\n / \r\n）转为 <br>，
+ * 确保多段落、列表逐行展示。高度折叠由 CSS 限高 + DOM 测量实现，不在这里截断字符。
+ */
+const renderedDescription = computed(() => {
+  const raw = product.value?.description || ''
+  return escapeHtml(raw).replace(/\r?\n/g, '<br>')
+})
+
+/** 折叠态下测量正文是否超出限高，超出才显示“展开全部”与底部渐隐 */
+function measureDesc() {
+  const el = descContentRef.value
+  if (!el) { descOverflow.value = false; return }
+  descOverflow.value = el.scrollHeight > el.clientHeight + 2
+}
+
+/** 展开/收起描述；收回折叠态后重新测量 */
+function toggleDesc() {
+  descClamped.value = !descClamped.value
+  if (descClamped.value) nextTick(measureDesc)
+}
+
 /**
  * 将后端 ISO 时间格式化为 yyyy-MM-dd HH:mm
  * @param {string} t ISO 时间字符串
@@ -359,6 +413,10 @@ async function loadDetail() {
   try {
     const res = await getProductDetail(route.params.id)
     product.value = res.data
+    // 重置折叠态并在 DOM 更新后测量描述是否超高
+    descClamped.value = true
+    descOverflow.value = false
+    await nextTick(measureDesc)
     const commentRes = await getCommentList(route.params.id, { pageNum: 1, pageSize: 20 })
     comments.value = commentRes.data.records
     if (product.value.userId) {
@@ -577,6 +635,8 @@ watch(() => route.params.id, (id, oldId) => {
     sellerProducts.value = []
     sellerAvatar.value = ''
     galleryIndex.value = 0
+    descClamped.value = true
+    descOverflow.value = false
     loadDetail()
   }
 })
@@ -736,19 +796,68 @@ watch(() => route.params.id, (id, oldId) => {
   display: flex; align-items: center; gap: 4px;
 }
 
-/* 描述 */
+/* 描述：卖家信笺卡片（和纸胶带 + 信纸横线 + 限高折叠） */
 .desc-card {
-  background: #F9FAFB; border-radius: 12px;
-  padding: 16px 20px; border: 1px solid #F3F4F6;
+  position: relative;
+  background: #fff;
+  border: 1px solid #E4F0E8;
+  border-radius: 14px;
+  padding: 18px 20px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
-.desc-label {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 600; color: #6B7280;
-  margin-bottom: 10px;
+.desc-tape {
+  position: absolute; top: -9px; left: 22px;
+  width: 62px; height: 18px;
+  background: rgba(16,185,129,0.16);
+  border-left: 1px dashed rgba(16,185,129,0.35);
+  border-right: 1px dashed rgba(16,185,129,0.35);
+  transform: rotate(-3deg);
+  border-radius: 2px;
 }
-.desc-card p {
-  color: #4B5563; font-size: 14px; line-height: 1.8; margin: 0;
+.desc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.desc-head-icon {
+  width: 26px; height: 26px; border-radius: 8px;
+  background: #E7F7EF; color: #059669;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
 }
+.desc-head-title { font-size: 14px; font-weight: 700; color: #1F2937; }
+.desc-count {
+  margin-left: auto;
+  padding: 2px 10px; border-radius: 999px;
+  background: #F3F8F4; color: #9CA3AF;
+  font-size: 12px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.desc-body { position: relative; }
+.desc-content {
+  color: #4B5563; font-size: 14px; line-height: 26px;
+  word-break: break-word; overflow-wrap: anywhere;
+  /* 信纸横线：周期与行高一致，让多行描述像写在信笺上 */
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0, transparent 25px,
+    #EEF5EF 25px, #EEF5EF 26px
+  );
+}
+.desc-body.is-clamped .desc-content { max-height: 156px; overflow: hidden; } /* 折叠限高 6 行 */
+.desc-body.has-fade::after {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 0; height: 52px;
+  background: linear-gradient(180deg, rgba(255,255,255,0), #fff 88%);
+  pointer-events: none;
+}
+.desc-empty { color: #9CA3AF; font-size: 14px; margin: 0; }
+.desc-toggle {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  margin: 12px auto 0; padding: 6px 18px;
+  background: #fff; border: 1px solid #D1FAE5; border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px; font-weight: 600; color: #059669;
+  box-shadow: 0 1px 2px rgba(16,185,129,0.08);
+  transition: background 0.2s, border-color 0.2s;
+}
+.desc-toggle:hover { background: #ECFDF5; border-color: #10B981; }
 
 /* 卖家：深绿迷你招牌，与卖家主页摊位语言同源 */
 .seller-card {
