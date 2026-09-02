@@ -11,28 +11,28 @@
         <template #label><el-icon><DataAnalysis /></el-icon> 数据概览</template>
         <el-row :gutter="20" v-if="dashboard">
           <el-col :xs="12" :sm="6">
-            <div class="stat-card stat-users" shadow="hover">
+            <div class="stat-card stat-users" shadow="hover" @click="activeTab = 'users'" title="查看用户管理">
               <div class="stat-icon-bg"><el-icon :size="24"><User /></el-icon></div>
               <div class="stat-value">{{ dashboard.userCount }}</div>
               <div class="stat-label">用户总数</div>
             </div>
           </el-col>
           <el-col :xs="12" :sm="6">
-            <div class="stat-card stat-products">
+            <div class="stat-card stat-products" shadow="hover" @click="activeTab = 'products'" title="查看商品管理">
               <div class="stat-icon-bg"><el-icon :size="24"><Goods /></el-icon></div>
               <div class="stat-value">{{ dashboard.productCount }}</div>
               <div class="stat-label">商品总数</div>
             </div>
           </el-col>
           <el-col :xs="12" :sm="6">
-            <div class="stat-card stat-orders">
+            <div class="stat-card stat-orders" shadow="hover" @click="activeTab = 'orders'" title="查看订单管理">
               <div class="stat-icon-bg"><el-icon :size="24"><Document /></el-icon></div>
               <div class="stat-value">{{ dashboard.orderCount }}</div>
               <div class="stat-label">订单总数</div>
             </div>
           </el-col>
           <el-col :xs="12" :sm="6">
-            <div class="stat-card stat-today">
+            <div class="stat-card stat-today" shadow="hover" @click="activeTab = 'sales'" title="查看销售统计">
               <div class="stat-icon-bg"><el-icon :size="24"><TrendCharts /></el-icon></div>
               <div class="stat-value">{{ dashboard.todayOrderCount }}</div>
               <div class="stat-label">今日订单</div>

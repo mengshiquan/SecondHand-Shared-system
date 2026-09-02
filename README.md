@@ -111,6 +111,7 @@ npm run dev
 
 > 前端运行在 `http://localhost:5173`，已配置 Vite 代理转发 `/api` 到后端 8080 端口。
 
+<<<<<<< HEAD
 ## 支付配置（支付宝沙箱）
 
 `application.yml` 中的 `pay.alipay` 段：
@@ -136,6 +137,8 @@ pay:
 |--------|------|------|
 | admin | admin | 管理员 |
 | student | 123456 | 普通用户 |
+=======
+>>>>>>> 478b981675020440d93093895516ac25c8e89f3a
 
 ## API 接口概览
 
