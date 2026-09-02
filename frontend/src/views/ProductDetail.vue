@@ -24,6 +24,7 @@
               <span class="gallery-counter" v-if="product.images.length > 1">
                 {{ (galleryIndex || 0) + 1 }} / {{ product.images.length }}
               </span>
+              <span class="gallery-hangtag" v-if="product.categoryName">{{ product.categoryName }}</span>
             </div>
             <div class="gallery-thumbs" v-if="product.images.length > 1">
               <div
@@ -59,7 +60,8 @@
               </div>
             </div>
 
-            <div class="price-box">
+            <div class="price-tag">
+              <span class="tag-hole"></span>
               <div class="price-main">
                 <span class="price-symbol">¥</span>
                 <span class="price-value">{{ product.price }}</span>
@@ -87,12 +89,14 @@
 
             <div class="seller-card">
               <div class="seller-main" title="进入 TA 的商品主页" @click="goSellerHome">
-                <el-avatar :size="48" class="seller-avatar">
-                  {{ product.sellerName?.[0] }}
-                </el-avatar>
+                <div class="seller-stamp">
+                  <el-avatar :size="52" :src="sellerAvatar || undefined" class="seller-avatar">
+                    {{ product.sellerName?.[0] }}
+                  </el-avatar>
+                </div>
                 <div class="seller-info">
                   <span class="seller-name">{{ product.sellerName }}</span>
-                  <span class="seller-label">信用良好 · 已认证 · 点击查看主页</span>
+                  <span class="seller-label">校园认证卖家 · 点击查看主页</span>
                 </div>
               </div>
               <div class="seller-actions">
@@ -113,6 +117,7 @@
                   <el-icon><WarningFilled /></el-icon>投诉
                 </el-button>
               </div>
+              <div class="awning-edge"></div>
             </div>
 
             <div class="actions">
@@ -148,14 +153,22 @@
         </el-col>
       </el-row>
 
+      <!-- 移动端底部操作栏：悬浮于底部导航之上，提升拇指可达性 -->
+      <div v-if="product.status === 'ON_SALE' && !isOwner" class="mobile-action-bar">
+        <el-button class="bar-fav" :type="product.favorited ? 'warning' : ''" @click="handleFavorite">
+          <el-icon><Star /></el-icon>
+        </el-button>
+        <el-button class="bar-cart" plain @click="handleAddCart">
+          <el-icon><ShoppingCart /></el-icon>加购
+        </el-button>
+        <el-button class="bar-buy" type="primary" @click="handleBuy">立即购买</el-button>
+      </div>
+
       <!-- 卖家其他在售 -->
       <section v-if="sellerProducts.length > 0" class="seller-products">
-        <div class="section-head">
-          <div class="section-head-left">
-            <el-icon :size="20"><Shop /></el-icon>
-            <h2>{{ product.sellerName }} 的其他在售</h2>
-          </div>
-          <span class="section-count">{{ sellerProducts.length }} 件</span>
+        <div class="section-sign">
+          <h2>{{ product.sellerName }} 的其他在售</h2>
+          <span class="sign-count">{{ sellerProducts.length }} 件</span>
         </div>
         <div class="seller-products-grid">
           <ProductCard v-for="sp in sellerProducts" :key="sp.id" :product="sp" />
@@ -231,9 +244,9 @@
 
       <!-- 评论区 -->
       <section class="comments-section">
-        <div class="comments-header">
+        <div class="section-sign">
           <h2>商品评价</h2>
-          <span class="comments-count" v-if="comments.length">{{ comments.length }} 条评价</span>
+          <span class="sign-count" v-if="comments.length">{{ comments.length }} 条评价</span>
         </div>
 
         <div v-if="userStore.isLoggedIn" class="comment-form-card">
@@ -278,7 +291,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, Document, Share, ChatDotRound, InfoFilled, Shop, WarningFilled, ShoppingCart, Location } from '@element-plus/icons-vue'
+import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, Document, Share, ChatDotRound, InfoFilled, WarningFilled, ShoppingCart, Location } from '@element-plus/icons-vue'
 import { getProductDetail, getProductList } from '@/api/product'
 import { createOrder } from '@/api/order'
 import { addToCart } from '@/api/cart'
@@ -286,6 +299,7 @@ import { getAddressList } from '@/api/address'
 import { toggleFavorite } from '@/api/favorite'
 import { getCommentList, addComment } from '@/api/comment'
 import { submitComplaint } from '@/api/complaint'
+import { getSellerInfo } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import ProductCard from '@/components/ProductCard.vue'
 
@@ -304,6 +318,7 @@ const buyDialogVisible = ref(false)    // 购买信息弹窗显隐
 const buyFormRef = ref(null)           // 购买表单引用
 const galleryIndex = ref(0)            // 当前展示图片索引
 const sellerProducts = ref([])         // 卖家其他在售商品
+const sellerAvatar = ref('')           // 卖家真实头像
 const showComplaintDialog = ref(false) // 投诉弹窗显隐
 const complaining = ref(false)         // 投诉提交中
 const complaintForm = reactive({ targetUserId: null, reason: '', description: '' })
@@ -348,6 +363,7 @@ async function loadDetail() {
     comments.value = commentRes.data.records
     if (product.value.userId) {
       loadSellerProducts(product.value.userId)
+      loadSellerInfo(product.value.userId)
     }
   } finally {
     loading.value = false
@@ -363,6 +379,17 @@ async function loadSellerProducts(sellerId) {
     const res = await getProductList({ sellerId, status: 'ON_SALE', pageSize: 7 })
     sellerProducts.value = (res.data.records || []).filter(p => p.id !== Number(route.params.id)).slice(0, 6)
   } catch { sellerProducts.value = [] }
+}
+
+/**
+ * 加载卖家公开信息（真实头像），失败时回退首字头像
+ * @param {number} sellerId 卖家用户 ID
+ */
+async function loadSellerInfo(sellerId) {
+  try {
+    const res = await getSellerInfo(sellerId)
+    sellerAvatar.value = res.data.avatar || ''
+  } catch { sellerAvatar.value = '' }
 }
 
 /**
@@ -548,6 +575,7 @@ watch(() => route.params.id, (id, oldId) => {
     product.value = null
     comments.value = []
     sellerProducts.value = []
+    sellerAvatar.value = ''
     galleryIndex.value = 0
     loadDetail()
   }
@@ -602,6 +630,25 @@ watch(() => route.params.id, (id, oldId) => {
   font-variant-numeric: tabular-nums;
 }
 
+/* 分类吊签：集市标签语言（左端带穿绳孔） */
+.gallery-hangtag {
+  position: absolute; top: 12px; left: 12px;
+  padding: 4px 12px 4px 20px;
+  background: var(--sh-primary-deep);
+  color: #fff;
+  font-size: 12px;
+  letter-spacing: 1px;
+  border-radius: 4px 999px 999px 4px;
+}
+.gallery-hangtag::before {
+  content: '';
+  position: absolute; left: 8px; top: 50%;
+  transform: translateY(-50%);
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+}
+
 /* 缩略图 */
 .gallery-thumbs {
   display: flex; gap: 8px; padding: 12px;
@@ -652,12 +699,23 @@ watch(() => route.params.id, (id, oldId) => {
 }
 .btn-share:hover { border-color: #10B981; color: #10B981; background: #F0FDF4; }
 
-/* 价格 */
-.price-box {
-  padding: 18px 20px;
-  background: linear-gradient(135deg, #FFFBEB, #FFF7ED);
-  border-radius: 14px;
-  border: 1px solid #FEF3C7;
+/* 集市吊牌式价格区：白底吊牌 + 穿绳孔 + 虚线边 */
+.price-tag {
+  position: relative;
+  padding: 16px 20px 14px 42px;
+  background: #fff;
+  border: 1.5px dashed #FCD34D;
+  border-radius: 12px;
+  transform: rotate(-0.6deg);
+  box-shadow: var(--sh-shadow-sm);
+}
+.tag-hole {
+  position: absolute; left: 14px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  border: 2px solid #FCD34D;
+  border-radius: 50%;
+  background: var(--sh-bg);
 }
 .price-main { display: flex; align-items: baseline; gap: 4px; margin-bottom: 8px; }
 .price-symbol { font-size: 20px; font-weight: 700; color: #F59E0B; }
@@ -692,34 +750,40 @@ watch(() => route.params.id, (id, oldId) => {
   color: #4B5563; font-size: 14px; line-height: 1.8; margin: 0;
 }
 
-/* 卖家 */
+/* 卖家：深绿迷你招牌，与卖家主页摊位语言同源 */
 .seller-card {
+  position: relative;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #ECFDF5, #D1FAE5);
-  border-radius: 14px;
-  border: 1px solid #A7F3D0;
+  padding: 16px 20px 20px;
+  background: var(--sh-primary-deep);
+  border-radius: 14px 14px 0 0;
   gap: 16px;
 }
 .seller-main {
   display: flex; align-items: center; gap: 14px;
   cursor: pointer;
 }
-.seller-avatar { flex-shrink: 0; }
+.seller-stamp {
+  flex-shrink: 0;
+  padding: 4px;
+  border: 2px dashed rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+}
+.seller-avatar { background: #fff; color: #059669; font-weight: 700; }
 .seller-info { display: flex; flex-direction: column; gap: 3px; }
-.seller-name { font-size: 15px; font-weight: 600; color: #1F2937; }
-.seller-label { font-size: 12px; color: #059669; }
+.seller-name { font-size: 15px; font-weight: 700; color: #fff; }
+.seller-label { font-size: 12px; color: #D1FAE5; }
 .seller-actions { flex-shrink: 0; }
 .btn-contact {
-  border-color: #059669; color: #059669;
+  background: #fff; border-color: #fff; color: #059669;
   font-weight: 600;
 }
-.btn-contact:hover { background: #059669; color: #fff; }
+.btn-contact:hover { background: #ECFDF5; }
 .btn-complaint {
-  border-color: #FCA5A5; color: #DC2626;
+  background: transparent; border-color: rgba(255, 255, 255, 0.5); color: #fff;
   font-weight: 500;
 }
-.btn-complaint:hover { background: #FEF2F2; border-color: #EF4444; }
+.btn-complaint:hover { background: rgba(255, 255, 255, 0.12); border-color: #fff; }
 .btn-comment-complaint {
   margin-left: auto; opacity: 0;
   transition: opacity 0.2s;
@@ -736,26 +800,14 @@ watch(() => route.params.id, (id, oldId) => {
 .btn-cart:hover { background: #F0FDF4; }
 .btn-fav { height: 48px; }
 
-/* ====== 卖家其他商品 ====== */
+/* 移动端底部操作栏：默认隐藏，≤768px 时替代页内操作按钮 */
+.mobile-action-bar { display: none; }
+
+/* ====== 卖家其他商品（标题用全局 .section-sign 招牌样式） ====== */
 .seller-products {
   margin-top: 40px;
   padding-top: 32px;
   border-top: 2px solid #F3F4F6;
-}
-.section-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 20px;
-}
-.section-head-left {
-  display: flex; align-items: center; gap: 10px;
-}
-.section-head-left h2 {
-  font-size: 18px; font-weight: 700; color: #1F2937; margin: 0;
-}
-.section-head-left .el-icon { color: #10B981; }
-.section-count {
-  font-size: 13px; color: #9CA3AF;
-  background: #F3F4F6; padding: 4px 12px; border-radius: 20px;
 }
 .seller-products-grid {
   display: grid;
@@ -781,19 +833,11 @@ watch(() => route.params.id, (id, oldId) => {
 }
 .buy-notice strong { color: #D97706; }
 
-/* ====== 评论区 ====== */
+/* ====== 评论区（标题用全局 .section-sign 招牌样式） ====== */
 .comments-section {
   margin-top: 48px; padding-top: 32px;
   border-top: 2px solid #F3F4F6;
 }
-.comments-header {
-  display: flex; align-items: baseline; gap: 12px;
-  margin-bottom: 24px;
-}
-.comments-header h2 {
-  font-size: 20px; font-weight: 700; color: #1F2937; margin: 0;
-}
-.comments-count { font-size: 14px; color: #9CA3AF; }
 
 /* 评论表单 */
 .comment-form-card {
@@ -844,6 +888,21 @@ watch(() => route.params.id, (id, oldId) => {
   .no-image { height: 280px; }
   .seller-card { flex-direction: column; align-items: flex-start; }
   .seller-products-grid { grid-template-columns: repeat(2, 1fr); }
+  /* 页内操作按钮让位给底部固定操作栏 */
+  .actions { display: none; }
+  .detail { padding-bottom: 88px; }
+  .mobile-action-bar {
+    position: fixed; left: 0; right: 0;
+    bottom: calc(64px + env(safe-area-inset-bottom, 8px));
+    z-index: 190;
+    display: flex; gap: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  }
+  .bar-fav { width: 44px; padding: 0; margin: 0; }
+  .bar-cart { flex: 1; margin: 0; border-color: #10B981; color: #10B981; font-weight: 600; }
+  .bar-buy { flex: 1.4; margin: 0; font-weight: 700; }
 }
 /* 手机端 */
 @media (max-width: 480px) {
@@ -852,8 +911,6 @@ watch(() => route.params.id, (id, oldId) => {
   .seller-card { padding: 12px 14px; }
   .seller-actions { width: 100%; display: flex; flex-direction: column; gap: 8px; }
   .seller-actions .el-button { width: 100%; margin: 0; }
-  .actions { flex-direction: column; }
-  .btn-fav { width: 100%; }
   .seller-products-grid {
     grid-template-columns: repeat(2, 1fr);
     overflow-x: auto;

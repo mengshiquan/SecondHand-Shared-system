@@ -72,6 +72,15 @@ export function getUserBlacklistStatus() {
 }
 
 /**
+ * 获取卖家主页公开信息（昵称、头像），无需登录
+ * @param {number|string} id 卖家用户 ID
+ * @returns {Promise} { id, nickname, avatar }
+ */
+export function getSellerInfo(id) {
+  return request.get(`/user/seller/${id}`)
+}
+
+/**
  * 注销当前登录账号
  * @param {Object} data 身份校验参数
  * @returns {Promise}

@@ -235,6 +235,53 @@ html {
   .page-title { font-size: 20px; }
 }
 
+/* ========== 区块招牌（页内小节标题：翠绿眉条 + 计数胶囊） ========== */
+.section-sign {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.section-sign h2 {
+  margin: 0;
+  font-size: var(--sh-size-md);
+  font-weight: 700;
+  color: var(--sh-pine);
+  display: flex;
+  align-items: center;
+}
+.section-sign h2::before {
+  content: '';
+  width: 4px;
+  height: 0.9em;
+  border-radius: 2px;
+  /* 与页头眉条同款信号：暖橙价签尖 + 松绿主体 */
+  background: linear-gradient(180deg, var(--sh-accent) 0px, var(--sh-accent) 3px, var(--sh-primary) 3px, var(--sh-primary-deep) 100%);
+  margin-right: 8px;
+  flex: none;
+}
+.sign-count {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--sh-line-soft);
+  color: var(--sh-muted);
+  font-size: var(--sh-size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ========== 遮阳篷垂边（集市招牌语言，配合深绿招牌底使用） ========== */
+.awning-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+  height: 12px;
+  background: radial-gradient(circle at 11px 0, var(--sh-primary-deep) 10px, transparent 11px);
+  background-size: 22px 12px;
+  background-repeat: repeat-x;
+  pointer-events: none;
+}
+
 /* ========== 响应式工具类 ========== */
 /* 平板端(≤1024px)隐藏 */
 @media (max-width: 1024px) {

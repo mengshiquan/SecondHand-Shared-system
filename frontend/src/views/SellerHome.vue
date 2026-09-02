@@ -4,7 +4,7 @@
     <section class="storefront">
       <div class="storefront-inner">
         <div class="stamp">
-          <el-avatar :size="72" class="stamp-avatar">{{ sellerName?.[0] || '?' }}</el-avatar>
+          <el-avatar :size="72" :src="sellerAvatar || undefined" class="stamp-avatar">{{ sellerName?.[0] || '?' }}</el-avatar>
         </div>
         <div class="store-id">
           <h1 class="store-name">{{ sellerName || '未知卖家' }}</h1>
@@ -29,7 +29,7 @@
         </div>
       </div>
       <!-- 遮阳篷垂边：摊位招牌的记忆点 -->
-      <div class="awning"></div>
+      <div class="awning-edge"></div>
     </section>
 
     <!-- 货架切换：在售 / 已售 -->
@@ -68,6 +68,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Medal } from '@element-plus/icons-vue'
 import { getProductList } from '@/api/product'
+import { getSellerInfo } from '@/api/user'
 import { useUserStore } from '@/stores/user'
 import ProductCard from '@/components/ProductCard.vue'
 
@@ -77,6 +78,7 @@ const userStore = useUserStore()
 
 const products = ref([])      // 当前货架商品列表
 const sellerName = ref('')    // 卖家昵称
+const sellerAvatar = ref('')  // 卖家真实头像
 const tab = ref('ON_SALE')    // 当前货架：ON_SALE-在售 SOLD-已售
 const onSaleTotal = ref(0)    // 在售总数
 const soldTotal = ref(0)      // 已售总数
@@ -89,9 +91,15 @@ const loading = ref(false)    // 加载状态
 const stallNo = computed(() => String(route.params.id || 0).padStart(4, '0'))
 
 /**
- * 拉取经营统计（在售/已售总数）与卖家昵称
+ * 拉取经营统计（在售/已售总数）与卖家公开信息（昵称/头像）
  */
 async function loadStats() {
+  // 卖家公开信息独立请求，失败不阻塞货架展示
+  try {
+    const info = await getSellerInfo(route.params.id)
+    sellerName.value = info.data.nickname || ''
+    sellerAvatar.value = info.data.avatar || ''
+  } catch { sellerName.value = ''; sellerAvatar.value = '' }
   try {
     const [onSale, sold] = await Promise.all([
       getProductList({ sellerId: route.params.id, status: 'ON_SALE', pageNum: 1, pageSize: 1 }),
@@ -99,12 +107,6 @@ async function loadStats() {
     ])
     onSaleTotal.value = onSale.data.total || 0
     soldTotal.value = sold.data.total || 0
-    const first = onSale.data.records?.[0] || sold.data.records?.[0]
-    if (first) {
-      sellerName.value = first.sellerName || ''
-    } else {
-      await loadSellerName()
-    }
   } catch { /* 统计失败不阻塞货架展示 */ }
 }
 
@@ -122,22 +124,9 @@ async function load() {
     })
     products.value = res.data.records || []
     total.value = res.data.total || 0
-    if (products.value.length && !sellerName.value) {
-      sellerName.value = products.value[0].sellerName || ''
-    }
   } finally {
     loading.value = false
   }
-}
-
-/**
- * 无任何商品时，从历史商品中取卖家昵称兜底
- */
-async function loadSellerName() {
-  try {
-    const res = await getProductList({ sellerId: route.params.id, pageNum: 1, pageSize: 1 })
-    sellerName.value = res.data.records?.[0]?.sellerName || ''
-  } catch { sellerName.value = '' }
 }
 
 /** 切换在售/已售货架 */
@@ -177,6 +166,7 @@ watch(() => route.params.id, (id, oldId) => {
     tab.value = 'ON_SALE'
     products.value = []
     sellerName.value = ''
+    sellerAvatar.value = ''
     onSaleTotal.value = 0
     soldTotal.value = 0
     total.value = 0
@@ -210,17 +200,7 @@ watch(() => route.params.id, (id, oldId) => {
   mask-image: linear-gradient(#000 55%, transparent);
   pointer-events: none;
 }
-/* 遮阳篷垂边 */
-.awning {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -11px;
-  height: 12px;
-  background: radial-gradient(circle at 11px 0, #059669 10px, transparent 11px);
-  background-size: 22px 12px;
-  background-repeat: repeat-x;
-}
+/* 遮阳篷垂边使用全局 .awning-edge 工具类 */
 
 @keyframes stall-in {
   from { opacity: 0; transform: translateY(-8px); }

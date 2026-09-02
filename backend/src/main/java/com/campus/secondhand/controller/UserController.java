@@ -1,5 +1,6 @@
 package com.campus.secondhand.controller;
 
+import com.campus.secondhand.common.BusinessException;
 import com.campus.secondhand.common.Result;
 import com.campus.secondhand.dto.LoginDTO;
 import com.campus.secondhand.dto.RegisterDTO;
@@ -39,6 +40,20 @@ public class UserController {
     @GetMapping("/info")
     public Result<User> info() {
         return Result.success(userService.getCurrentUser());
+    }
+
+    /** 卖家主页公开信息：仅返回昵称与头像，无需登录 */
+    @GetMapping("/seller/{id}")
+    public Result<Map<String, Object>> sellerInfo(@PathVariable Long id) {
+        User user = userService.getById(id);
+        if (user == null) {
+            throw new BusinessException("用户不存在");
+        }
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("id", user.getId());
+        result.put("nickname", user.getNickname());
+        result.put("avatar", user.getAvatar());
+        return Result.success(result);
     }
 
     /** 更新个人资料 */
