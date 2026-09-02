@@ -60,6 +60,8 @@ public class UserController {
     public Result<Map<String, Object>> blacklistStatus() {
         User user = userService.getCurrentUser();
         Map<String, Object> result = new java.util.HashMap<>();
+        // 禁用标记：供前端顶栏展示禁用提醒（登录态残留会话场景）
+        result.put("disabled", user.getStatus() != null && user.getStatus() == 0);
         if (user.getBlacklistStatus() != null) {
             result.put("blacklisted", true);
             result.put("status", user.getBlacklistStatus());

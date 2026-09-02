@@ -1,8 +1,12 @@
 <template>
-  <header class="header" :class="{ 'header-blacklisted': blacklisted }">
-    <div v-if="blacklisted" class="blacklist-bar">
+  <header class="header" :class="{ 'header-blacklisted': blacklisted || disabled }">
+    <div v-if="blacklisted || disabled" class="blacklist-bar">
       <div class="blacklist-bar-inner page-container">
-        <span>
+        <span v-if="disabled">
+          <el-icon><WarningFilled /></el-icon>
+          你的账号已被禁用，无法发布、购买、评论和投诉，如有异议可提交申诉
+        </span>
+        <span v-else>
           <el-icon><WarningFilled /></el-icon>
           {{ blacklistInfo.status === 'AUTO' ? '系统检测到违规行为，' : '管理员已限制' }}你的账号已被限制使用
           <template v-if="blacklistInfo.until">，解封时间：{{ formatUntil(blacklistInfo.until) }}</template>
@@ -50,8 +54,8 @@
           </template>
         </el-dropdown>
 
-        <!-- 聊天入口 -->
-        <span v-if="userStore.isLoggedIn" class="bell-wrap hide-mobile" title="消息" @click="router.push('/chat')">
+        <!-- 聊天入口（手机端同样展示，保证移动端有聊天入口） -->
+        <span v-if="userStore.isLoggedIn" class="bell-wrap" title="消息" @click="router.push('/chat')">
           <el-icon :size="22"><ChatLineSquare /></el-icon>
           <span v-if="chatStore.unread > 0" class="bell-badge">{{ chatStore.unread > 99 ? '99+' : chatStore.unread }}</span>
         </span>
@@ -334,6 +338,8 @@ const mobileMenuOpen = ref(false)
 // 小黑屋状态
 const blacklisted = ref(false)
 const blacklistInfo = ref({})
+// 账号禁用状态（管理员禁用后残留登录态的提醒）
+const disabled = ref(false)
 const showAppealDialog = ref(false)
 const appealReason = ref('')
 const appealing = ref(false)
@@ -407,14 +413,15 @@ function formatUntil(d) {
   return d.replace('T', ' ').substring(0, 16)
 }
 
-/** 登录后检查账号是否处于小黑屋。 */
+/** 登录后检查账号是否处于小黑屋或被禁用。 */
 async function checkBlacklist() {
   if (!userStore.isLoggedIn) return
   try {
     const res = await getUserBlacklistStatus()
     blacklisted.value = res.data.blacklisted
+    disabled.value = !!res.data.disabled
     blacklistInfo.value = res.data
-  } catch { blacklisted.value = false }
+  } catch { blacklisted.value = false; disabled.value = false }
 }
 
 /** 提交账号封禁申诉。 */
@@ -663,12 +670,15 @@ function handleLogout() {
 /* ====== 手机端（≤768px）：紧凑布局 + 汉堡菜单 ====== */
 @media (max-width: 768px) {
   .header-inner {
-    gap: 10px;
+    gap: 8px;
     justify-content: space-between;
     padding-top: 8px;
     padding-bottom: 8px;
+    /* 左右内边距收窄，logo 前移，为搜索框和购物车图标留出空间 */
+    padding-left: 10px;
+    padding-right: 10px;
   }
-  .logo-img { height: 46px; }
+  .logo-img { height: 36px; }
   .search-box {
     flex: 1 1 auto;
     min-width: 0;
@@ -681,6 +691,16 @@ function handleLogout() {
     min-width: 16px; height: 16px; line-height: 16px;
     font-size: 10px;
   }
+}
+
+/* 小屏手机：logo 进一步缩小，保证搜索框可用宽度 */
+@media (max-width: 480px) {
+  .header-inner {
+    gap: 6px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  .logo-img { height: 30px; }
 }
 
 /* ====== 汉堡菜单遮罩与面板 ====== */

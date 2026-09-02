@@ -31,6 +31,7 @@ const routes = [
       { path: 'help', name: 'Help', component: () => import('@/views/Help.vue') },
       { path: 'products', name: 'ProductList', component: () => import('@/views/ProductList.vue') },
       { path: 'product/:id', name: 'ProductDetail', component: () => import('@/views/ProductDetail.vue') },
+      { path: 'seller/:id', name: 'SellerHome', component: () => import('@/views/SellerHome.vue') },
       { path: 'publish', name: 'PublishProduct', component: () => import('@/views/PublishProduct.vue'), meta: { requiresAuth: true } },
       { path: 'notifications', name: 'Notifications', component: () => import('@/views/Notifications.vue'), meta: { requiresAuth: true } },
       { path: 'profile', name: 'Profile', component: () => import('@/views/Profile.vue'), meta: { requiresAuth: true } },

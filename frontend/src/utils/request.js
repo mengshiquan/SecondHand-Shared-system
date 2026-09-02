@@ -39,10 +39,14 @@ request.interceptors.response.use(
     return res
   },
   (error) => {
-    if (error.response && error.response.status === 401) {
-      ElMessage.error('登录已过期，请重新登录')
+    const res = error.response
+    if (res && res.status === 401) {
+      ElMessage.error(res.data?.message || '登录已过期，请重新登录')
       clearAuth()
       router.push('/login')
+    } else if (res && res.data && res.data.message) {
+      // 透出后端业务错误消息（如账号禁用/小黑屋限制提醒）
+      ElMessage.error(res.data.message)
     } else {
       ElMessage.error(error.message || '网络异常')
     }

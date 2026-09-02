@@ -30,12 +30,15 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 小黑屋限制的路径前缀 */
+    /** 小黑屋/禁用限制的写入路径前缀（申诉为救济通道，不在此列） */
     private static final String[] RESTRICTED_PATHS = {
         "/product/",
         "/comment/",
         "/order/",
-        "/favorite/"
+        "/favorite/",
+        "/complaint/",
+        "/chat/",
+        "/cart/"
     };
 
     @Override
@@ -86,33 +89,37 @@ public class JwtInterceptor implements HandlerInterceptor {
             request.setAttribute("role", current.getRole());
         }
 
-        // 小黑屋检查：对受限写入接口拦截
-        if (blacklistService.isBlacklisted(userId)) {
-            String method = request.getMethod();
-            boolean restricted = false;
-            for (String rp : RESTRICTED_PATHS) {
-                if (uri.contains(rp) && !"GET".equals(method)) {
-                    restricted = true;
-                    break;
-                }
+        // 受限写入拦截：发布/购买/评论/投诉/聊天等操作性接口实时复核禁用与小黑屋状态
+        if (!"GET".equals(request.getMethod()) && isRestrictedPath(uri)) {
+            User user = blacklistService.getUserById(userId);
+            if (user == null) {
+                writeError(response, HttpServletResponse.SC_UNAUTHORIZED, 401, "账号不存在，请重新登录");
+                return false;
             }
-            if (restricted) {
-                User user = blacklistService.getUserById(userId);
-                String until = user != null && user.getBlacklistUntil() != null
+            if (user.getStatus() != null && user.getStatus() == 0) {
+                writeError(response, HttpServletResponse.SC_FORBIDDEN, 403, "你的账号已被禁用，无法发布、购买、评论和投诉");
+                return false;
+            }
+            if (user.getBlacklistStatus() != null) {
+                String until = user.getBlacklistUntil() != null
                     ? user.getBlacklistUntil().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
                     : "待定";
-                response.setContentType("application/json;charset=UTF-8");
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                Map<String, Object> result = new HashMap<>();
-                result.put("code", 403);
-                result.put("message", "你的账号已被限制使用，解封时间：" + until);
-                result.put("data", null);
-                response.getWriter().write(objectMapper.writeValueAsString(result));
+                writeError(response, HttpServletResponse.SC_FORBIDDEN, 403, "你的账号已被限制使用，解封时间：" + until);
                 return false;
             }
         }
 
         return true;
+    }
+
+    /** 判断请求路径是否属于受限写入接口 */
+    private boolean isRestrictedPath(String uri) {
+        for (String rp : RESTRICTED_PATHS) {
+            if (uri.contains(rp)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** 输出统一格式的认证/权限错误响应 */

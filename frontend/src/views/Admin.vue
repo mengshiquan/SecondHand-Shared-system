@@ -818,8 +818,7 @@ function renderCharts() {
   if (barBox) initBarChart(barBox)
 }
 
-/** 渲染分类商品数量饼图。 */
-/** 渲染分类商品数量饼图。 */
+/** 渲染分类商品数量饼图：分类过多时将长尾合并为“其他”，避免标签与图例重叠。 */
 function initPieChart(dom) {
   if (pieChart) pieChart.dispose()
   if (!dom || dom.offsetParent === null) {
@@ -834,33 +833,44 @@ function initPieChart(dom) {
     const name = p.categoryName || '未分类'
     catMap[name] = (catMap[name] || 0) + 1
   }
-  const data = Object.entries(catMap).map(([name, value]) => ({ name, value }))
+  const sorted = Object.entries(catMap).map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
 
   pieChart = echarts.init(dom)
-  if (data.length === 0) {
+  if (sorted.length === 0) {
     pieChart.setOption({
       title: { text: '暂无商品数据', left: 'center', top: 'center', textStyle: { color: '#9CA3AF', fontSize: 14 } }
     })
     return
   }
 
+  // 最多展示前 8 个分类，其余合并为“其他”，保证商品增多后图表仍可读
+  const MAX_SLICES = 8
+  const data = sorted.length > MAX_SLICES
+    ? [
+        ...sorted.slice(0, MAX_SLICES),
+        { name: '其他', value: sorted.slice(MAX_SLICES).reduce((sum, d) => sum + d.value, 0) }
+      ]
+    : sorted
+
   pieChart.setOption({
     tooltip: { trigger: 'item', formatter: '{b}: {c} 件 ({d}%)' },
-    legend: { bottom: 0 },
+    legend: { type: 'scroll', bottom: 0 },
     color: ['#10B981', '#059669', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'],
     series: [{
       type: 'pie',
       radius: ['45%', '75%'],
-      center: ['50%', '45%'],
+      center: ['50%', '42%'],
       roseType: 'area',
       itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 3 },
-      label: { formatter: '{b}\n{d}%' },
+      label: { formatter: '{b}\n{d}%', fontSize: 11 },
+      labelLine: { length: 14, length2: 10 },
+      labelLayout: { hideOverlap: true },
       data
     }]
   })
 }
 
-/** 渲染核心业务数据柱状图。 */
 /** 渲染核心业务数据柱状图。 */
 function initBarChart(dom) {
   if (barChart) barChart.dispose()

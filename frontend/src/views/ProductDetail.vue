@@ -86,13 +86,13 @@
             </div>
 
             <div class="seller-card">
-              <div class="seller-main">
+              <div class="seller-main" title="进入 TA 的商品主页" @click="goSellerHome">
                 <el-avatar :size="48" class="seller-avatar">
                   {{ product.sellerName?.[0] }}
                 </el-avatar>
                 <div class="seller-info">
                   <span class="seller-name">{{ product.sellerName }}</span>
-                  <span class="seller-label">信用良好 · 已认证</span>
+                  <span class="seller-label">信用良好 · 已认证 · 点击查看主页</span>
                 </div>
               </div>
               <div class="seller-actions">
@@ -275,7 +275,7 @@
 
 <script setup>
 // 商品详情页：加载商品信息，处理收藏、加购、立即购买、咨询和评价。
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Clock, ChatLineSquare, Goods, Picture, View, ArrowLeft, ArrowRight, Document, Share, ChatDotRound, InfoFilled, Shop, WarningFilled, ShoppingCart, Location } from '@element-plus/icons-vue'
@@ -406,6 +406,15 @@ function goChat() {
 }
 
 /**
+ * 进入卖家商品主页
+ */
+function goSellerHome() {
+  if (product.value?.userId) {
+    router.push(`/seller/${product.value.userId}`)
+  }
+}
+
+/**
  * 确认购买：校验表单 → 创建订单 → 关闭弹窗 → 提示并跳转订单列表
  */
 async function confirmBuy() {
@@ -532,6 +541,17 @@ async function submitComplaintHandler() {
 
 // 页面挂载后加载商品详情
 onMounted(loadDetail)
+
+// 同路由切换商品（组件复用）时重置状态并重新加载，避免详情页内容不刷新
+watch(() => route.params.id, (id, oldId) => {
+  if (id && id !== oldId) {
+    product.value = null
+    comments.value = []
+    sellerProducts.value = []
+    galleryIndex.value = 0
+    loadDetail()
+  }
+})
 </script>
 
 <style scoped>
