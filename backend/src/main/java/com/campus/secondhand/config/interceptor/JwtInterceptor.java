@@ -30,7 +30,7 @@ public class JwtInterceptor implements HandlerInterceptor {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** 小黑屋/禁用限制的写入路径前缀（申诉为救济通道，不在此列） */
+    /** 小黑屋/禁用限制的写入路径前缀（申诉为救济通道，不在此列；支付回调 /pay/alipay/notify 已在 WebMvcConfig 白名单放行，不受影响） */
     private static final String[] RESTRICTED_PATHS = {
         "/product/",
         "/comment/",
@@ -38,7 +38,8 @@ public class JwtInterceptor implements HandlerInterceptor {
         "/favorite/",
         "/complaint/",
         "/chat/",
-        "/cart/"
+        "/cart/",
+        "/pay/"
     };
 
     @Override
@@ -112,10 +113,21 @@ public class JwtInterceptor implements HandlerInterceptor {
         return true;
     }
 
-    /** 判断请求路径是否属于受限写入接口 */
+    /**
+     * 判断请求路径是否属于受限写入接口。
+     * <p>getRequestURI() 返回值含 context-path（/api）前缀，如 /api/product、/api/order/123，
+     * 因此不能用 equals/startsWith 直接比对。两种形态均需覆盖：
+     * <ul>
+     *   <li>子路径写操作（如 PUT /api/order/123/status）：用 contains("/order/") 匹配；</li>
+     *   <li>控制器根路径写操作（如 POST /api/product 发布商品、POST /api/order 下单、
+     *       POST /api/comment 评论、POST /api/complaint 投诉，末尾无斜杠）：用 endsWith(base) 匹配。</li>
+     * </ul>
+     * 旧实现仅用 contains("/product/") 会漏掉根路径创建接口，导致禁用用户仍能发布/购买/评论/投诉。
+     */
     private boolean isRestrictedPath(String uri) {
         for (String rp : RESTRICTED_PATHS) {
-            if (uri.contains(rp)) {
+            String base = rp.substring(0, rp.length() - 1); // 去掉末尾斜杠，如 "/product/" -> "/product"
+            if (uri.contains(rp) || uri.endsWith(base)) {
                 return true;
             }
         }

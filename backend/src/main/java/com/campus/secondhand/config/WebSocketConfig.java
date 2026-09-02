@@ -1,5 +1,7 @@
 package com.campus.secondhand.config;
 
+import com.campus.secondhand.entity.User;
+import com.campus.secondhand.service.BlacklistService;
 import com.campus.secondhand.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +29,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private BlacklistService blacklistService;
+
     /**
      * 注册 WebSocket 端点 /ws/chat，绑定 JWT 握手拦截器，允许跨域连接。
      *
@@ -40,7 +45,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
     }
 
     /**
-     * 握手阶段校验 JWT，把 userId 放进会话属性
+     * 握手阶段校验 JWT，并实时复核账号禁用与小黑屋状态，把 userId 放进会话属性。
+     * 被禁用/受限用户无法建立聊天连接，避免绕过 REST 拦截器继续收发消息。
      */
     private class JwtHandshakeInterceptor implements HandshakeInterceptor {
         @Override
@@ -53,7 +59,19 @@ public class WebSocketConfig implements WebSocketConfigurer {
             if (token == null || !jwtUtil.validateToken(token)) {
                 return false;
             }
-            attributes.put("userId", jwtUtil.getUserId(token));
+            Long userId = jwtUtil.getUserId(token);
+            // 实时复核账号状态：禁用（status=0）或小黑屋（blacklistStatus 非空）均拒绝握手
+            User user = blacklistService.getUserById(userId);
+            if (user == null) {
+                return false;
+            }
+            if (user.getStatus() != null && user.getStatus() == 0) {
+                return false;
+            }
+            if (user.getBlacklistStatus() != null) {
+                return false;
+            }
+            attributes.put("userId", userId);
             return true;
         }
 
