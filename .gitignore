@@ -20,6 +20,12 @@
 
 # ========== 部署素材与二进制文档 ==========
 服务器素材图片/
+*.doc
 *.docx
 *.pptx
+/*.png
 ~$*
+
+# ========== AI 辅助设计文档 ==========
+docs/superpowers/plans/2026-08-25-defense-highlights.md
+docs/superpowers/specs/2026-08-25-defense-highlights-design.md
