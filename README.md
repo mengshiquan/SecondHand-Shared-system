@@ -1,107 +1,120 @@
+<div align="center">
+
 # 校园二手物品共享平台
 
-前后端分离的校园二手交易平台，后端基于 Spring Boot 3.3 + Java 17 + MyBatis-Plus + JWT + Redis，前端基于 Vue 3 + Vite + Element Plus + Pinia + ECharts。支付集成支付宝沙箱扫码与微信模拟收银台。
+**基于 Spring Boot 3 + Vue 3 的全功能校园二手交易平台**
 
-## 项目结构
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-6DB33F?style=flat-square&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Vue](https://img.shields.io/badge/Vue-3.x-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)](https://vuejs.org/)
+[![Java](https://img.shields.io/badge/Java-17-ED8B00?style=flat-square&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-```
-SecondHand-Shared-system/
-├── backend/          # Spring Boot 后端
-├── frontend/         # Vue 3 前端
-├── sql/              # 数据库脚本（schema + 增量 migration）
-├── docs/             # 设计文档/论文资料
-└── README.md
-```
+</div>
+
+---
+
+## 项目简介
+
+面向高校学生的二手物品交易平台，采用前后端分离架构。覆盖商品发布与检索、购物车、订单流转、支付宝沙箱支付、即时聊天、后台管理与数据可视化等完整电商链路。
+
+## 页面预览
+
+| | |
+|:---:|:---:|
+| **首页** | **商品详情** |
+| ![首页](docs/screenshots/img.png) | ![商品详情](docs/screenshots/img_1.png) |
+| **购物车** | **实时聊天** |
+| ![购物车](docs/screenshots/img_2.png) | ![聊天](docs/screenshots/img_4.png) |
+| **后台数据概览** | **销售统计** |
+| ![数据概览](docs/screenshots/img_3.png) | ![销售统计](docs/screenshots/img_5.png) |
 
 ## 技术栈
 
-### 后端
-- Spring Boot 3.3.5（最低 JDK 17）
-- MyBatis-Plus 3.5.9
-- MySQL 8.0
-- Redis（Lettuce：分类树/商品详情缓存、分布式锁、频控、令牌黑名单）
-- JJWT 0.12.6（HMAC-SHA384）
-- spring-security-crypto（BCrypt 密码哈希）
-- EasyExcel 3.3.4（表格导出）
-- alipay-sdk-java 4.39.x（支付宝沙箱扫码支付）
-- Hutool 5.8.25、Lombok
-
-### 前端
-- Vue 3 + Vite
-- Element Plus + Icons
-- Pinia 状态管理
-- Vue Router 4
-- Axios
-- ECharts（数据图表）
-- qrcode（支付二维码渲染）
-
-## 设计规范
-
-| 设计元素 | 色值/规格 |
-|---------|----------|
-| 主题色 | `#10B981`（翠绿） |
-| 强调色 | `#F59E0B`（暖橙） |
-| 背景色 | `#F0F9F4`（浅绿底） |
-| 字体 | Helvetica Neue / PingFang SC / Microsoft YaHei |
-| 卡片圆角 | 12px |
-| 按钮圆角 | 6px |
+| 层级 | 技术选型 |
+|:---:|:---|
+| **后端** | Spring Boot 3.3 · Java 17 · MyBatis-Plus 3.5.9 · JJWT 0.12.6 (HMAC-SHA384) |
+| **数据层** | MySQL 8.0 · Redis 6+ (Lettuce) |
+| **前端** | Vue 3 · Vite · Element Plus · Pinia · Vue Router 4 · Axios |
+| **可视化** | ECharts · qrcode |
+| **支付** | 支付宝沙箱 (alipay-sdk-java 4.39) · 微信模拟收银台 |
+| **工具** | EasyExcel 3.3.4 · Hutool 5.8.25 · Lombok · BCrypt |
 
 ## 功能模块
 
-| 模块 | 功能 |
-|------|------|
-| 用户模块 | 登录/注册（学号+学校）、个人资料、修改密码、校园认证申请、收货地址管理、消息通知中心 |
-| 商品模块 | 发布/编辑/删除/下架、分页列表、关键词搜索、两级分类筛选、排序（综合/人气/价格升降）、收藏、咨询卖家（日限频控） |
-| 购物车 | 加购、按卖家分组、全选/单选、失效商品管理、移入收藏、结算下单 |
-| 订单模块 | 下单（30 分钟预留超时自动取消）、支付（支付宝沙箱扫码 / 微信模拟收银台）、发货、确认收货、退款/售后、平台仲裁、订单删除 |
-| 支付模块 | 支付宝沙箱 precreate 扫码付（RSA2 签名、异步回调验签、轮询主动查询补单）、微信模拟收银台（模拟扫码回调）、CAS 幂等落单 |
-| 后台管理 | 数据概览图表、用户管理（认证审核/角色/禁用/小黑屋）、商品/订单/分类管理、投诉与申诉处理、仲裁判定、销售统计、用户/商品/订单/销售 Excel 导出 |
+| 模块 | 功能要点 |
+|:---:|:---|
+| **用户** | 注册/登录 · 校园认证 · 个人资料 · 收货地址 · 消息通知 |
+| **商品** | 发布/编辑/下架 · 分类筛选 · 关键词搜索 · 多维排序 · 收藏 |
+| **购物车** | 按卖家分组 · 全选/单选 · 失效管理 · 结算下单 |
+| **订单** | 30 分钟超时取消 · 退款/售后 · 平台仲裁 · 状态流转 |
+| **支付** | 支付宝沙箱扫码付 (RSA2) · 微信模拟收银台 · 异步回调验签 |
+| **聊天** | WebSocket 实时通信 · 买卖双端点对点 |
+| **管理** | 数据看板 · 用户/商品/订单管理 · 投诉仲裁 · Excel 导出 · 销售统计 |
 
-### 订单状态机
+### 订单状态流转
 
 ```
-PENDING(待付款) → PAID(已付款) → SHIPPED(已发货) → COMPLETED(已完成)
-       ↘ CANCELLED(已取消)
-退款状态：NONE → REQUESTED → SELLER_AGREED / SELLER_REJECTED → ARBITRATION → ARBITRATION_REFUND / ARBITRATION_MAINTAIN
+待付款 ──→ 已付款 ──→ 已发货 ──→ 已完成
+  │
+  └──→ 已取消
+
+退款：申请 → 卖家同意/拒绝 → 平台仲裁 → 退款/维持
 ```
+
+## 设计规范
+
+| 元素 | 规格 |
+|:---:|:---|
+| 主题色 | `#10B981` 翠绿 |
+| 强调色 | `#F59E0B` 暖橙 |
+| 背景色 | `#F0F9F4` 浅绿底 |
+| 字体 | Helvetica Neue / PingFang SC / Microsoft YaHei |
+| 卡片圆角 | 12px · 按钮圆角 6px |
 
 ## 快速启动
 
 ### 环境要求
 
-- **JDK 17+**（Spring Boot 3.3 必须）
+- JDK 17+
 - Maven 3.6+
 - MySQL 8.0
 - Redis 6+
 - Node.js 18+
 
-### 1. 初始化数据库
+### 1. 克隆仓库
+
+```bash
+git clone https://github.com/mengshiquan/SecondHand-Shared-system.git
+cd SecondHand-Shared-system
+```
+
+### 2. 初始化数据库
 
 ```bash
 mysql -u root -p < sql/schema.sql
-# schema 之后按顺序补三块增量（通知、投诉/小黑屋、支付渠道）
-mysql -u root -p < sql/migration_notification.sql
-mysql -u root -p < sql/migration_blacklist.sql
-mysql -u root -p < sql/migration_pay_channel.sql
 ```
 
-> `migration_batch1.sql`、`migration_subcategories.sql` 的内容已合并进 `schema.sql`，新库不要重复执行。老库升级按需挑选 migration 执行。
+> `schema.sql` 为完整版建库脚本，新环境只需导入这一个文件。老库升级按需执行 `sql/migration_*.sql`。
 
-修改 `backend/src/main/resources/application.yml` 中的数据库/Redis 连接信息（均支持环境变量覆盖：`DB_USERNAME`、`DB_PASSWORD`、`REDIS_HOST` 等）。
+修改 `backend/src/main/resources/application.yml` 中的数据库和 Redis 连接信息（支持环境变量：`DB_USERNAME`、`DB_PASSWORD`、`REDIS_HOST`）。
 
-### 2. 启动后端
-
-确保 `JAVA_HOME` 指向 JDK 17 路径（如 `D:\java\jdk17`），否则 Maven 会因版本不兼容报错。
+### 3. 启动后端
 
 ```bash
 cd backend
+# Windows
 set JAVA_HOME=D:\java\jdk17
+mvn spring-boot:run
+
+# Linux/Mac
+export JAVA_HOME=/path/to/jdk17
 mvn spring-boot:run
 ```
 
 > 后端运行在 `http://localhost:8080/api`
 
-### 3. 启动前端
+### 4. 启动前端
 
 ```bash
 cd frontend
@@ -109,81 +122,50 @@ npm install
 npm run dev
 ```
 
-> 前端运行在 `http://localhost:5173`，已配置 Vite 代理转发 `/api` 到后端 8080 端口。
+> 前端运行在 `http://localhost:5173`，Vite 已配置 `/api` 代理转发到后端 8080 端口。
 
-<<<<<<< HEAD
-## 支付配置（支付宝沙箱）
+## 支付配置
 
-`application.yml` 中的 `pay.alipay` 段：
+在 `application.yml` 的 `pay.alipay` 段配置沙箱凭据：
 
 ```yaml
 pay:
   alipay:
-    app-id: ${ALIPAY_APP_ID:}          # 沙箱 APPID
-    private-key: ${ALIPAY_PRIVATE_KEY:}      # 应用私钥（RSA2）
-    alipay-public-key: ${ALIPAY_PUBLIC_KEY:} # 支付宝公钥（验签）
+    app-id: ${ALIPAY_APP_ID:}
+    private-key: ${ALIPAY_PRIVATE_KEY:}
+    alipay-public-key: ${ALIPAY_PUBLIC_KEY:}
     gateway: https://openapi-sandbox.dl.alipaydev.com/gateway.do
     notify-url: http://localhost:8080/api/pay/alipay/notify
 ```
 
-- 三个凭据从 [支付宝开放平台沙箱控制台](https://open.alipay.com/develop/sandbox/app) 领取，建议用环境变量注入，不要提交到公开仓库
-- 留空视为未配置：前端支付宝选项提示不可用，**微信模拟支付不受影响**
-- 本地无公网时异步回调不可达，由 `/pay/status` 轮询接口主动调用 `alipay.trade.query` 补单；部署公网后回调自然生效
-- 微信支付无个人开放沙箱（需营业执照+商户号），本项目采用模拟收银台：模拟二维码 + 模拟扫码回调端点，接口形态与真实微信 notify 对齐
+- 凭据从 [支付宝沙箱控制台](https://open.alipay.com/develop/sandbox/app) 获取，建议用环境变量注入
+- 留空时支付宝选项不可用，微信模拟支付不受影响
+- 本地无公网时回调不可达，由轮询接口主动查询补单
 
 ## 演示账号
 
 | 用户名 | 密码 | 角色 |
-|--------|------|------|
-| admin | admin | 管理员 |
-| student | 123456 | 普通用户 |
-=======
->>>>>>> 478b981675020440d93093895516ac25c8e89f3a
+|:---:|:---:|:---:|
+| `admin` | `admin` | 管理员 |
+| `student` | `123456` | 普通用户 |
 
-## API 接口概览
+## API 接口
 
-### 用户 `/user`
-- `POST /login` / `POST /register`
-- `GET /info` / `PUT /profile` / `PUT /password`
+| 模块 | 路径前缀 | 主要接口 |
+|:---:|:---:|:---|
+| 用户 | `/user` | 登录 · 注册 · 资料 · 密码 · 认证 |
+| 商品 | `/product` | 列表 · 详情 · 发布 · 编辑 · 下架 |
+| 购物车 | `/cart` | 加购 · 列表 · 删除 · 结算 |
+| 地址 | `/address` | 增删改查 · 设为默认 |
+| 订单 | `/order` | 创建 · 列表 · 发货 · 收货 · 退款 · 仲裁 |
+| 支付 | `/pay` | 支付宝预下单 · 回调 · 微信模拟 · 状态轮询 |
+| 收藏 | `/favorite` | 收藏/取消 · 列表 |
+| 评论 | `/comment` | 发表 · 列表 |
+| 通知 | `/notification` | 列表 · 未读数 · 已读 |
+| 文件 | `/file` | 图片上传 |
+| 后台 | `/admin` | 看板 · 用户/商品/订单管理 · 仲裁 · 导出 |
 
-### 商品 `/product`
-- `GET /list`（分页/搜索/分类/排序）、`GET /detail/{id}`、`GET /my`
-- `POST /`、`PUT /`、`DELETE /{id}`、`PUT /{id}/off-shelf`
-
-### 购物车 `/cart`
-- `POST /{productId}` 加购、`GET /list`、`DELETE /{id}`、`DELETE /batch`
-- `POST /move-to-favorite`、`DELETE /clear`、`POST /checkout` 结算
-
-### 地址 `/address`
-- `GET /list`、`POST /`、`PUT /{id}`、`DELETE /{id}`、`PUT /{id}/default`
-
-### 订单 `/order`
-- `POST /` 创建、`GET /list`、`GET /{id}`、`GET /status-counts`
-- `PUT /{id}/status`（发货/收货）、`POST /{id}/cancel`、`PUT /{id}/address`
-- `POST /{id}/refund` 申请退款、`PUT /{id}/refund/handle` 卖家处理、`POST /{id}/arbitration` 申请仲裁、`DELETE /{id}`
-
-### 支付 `/pay`
-- `POST /alipay/create/{orderId}` 支付宝预下单（返回沙箱二维码）
-- `POST /alipay/notify` 支付宝异步回调（免登录，验签）
-- `POST /wechat/create/{orderId}` 微信模拟预下单
-- `POST /wechat/notify/{orderNo}` 微信模拟扫码回调（免登录）
-- `GET /status/{orderId}` 支付状态轮询（含支付宝主动查询补单）
-
-### 收藏 `/favorite` · 评论 `/comment` · 通知 `/notification`
-- `POST /{productId}` 收藏/取消、`GET /list`
-- `POST /` 发表评论、`GET /list/{productId}`
-- `GET /list`、`GET /unread-count`、`PUT /{id}/read`、`PUT /read-all`
-
-### 文件 `/file`
-- `POST /upload` 图片上传
-
-### 后台 `/admin`（需管理员权限）
-- `GET /dashboard` 数据概览、销售统计
-- 用户管理（含 `PUT /users/verify` 认证审核）、商品/订单/分类管理
-- 投诉/申诉处理、`PUT /order/{id}/arbitration` 仲裁判定
-- `GET /export/users|products|orders` 表格导出（EasyExcel）
-
-## 统一返回格式
+### 统一返回格式
 
 ```json
 {
@@ -192,3 +174,36 @@ pay:
   "data": {}
 }
 ```
+
+- `code: 200` — 业务成功
+- `code: 401` — 未登录或令牌过期
+- `code: 500` — 业务异常（`message` 含错误原因）
+
+## 项目结构
+
+```
+SecondHand-Shared-system/
+├── backend/              # Spring Boot 后端
+│   └── src/main/java/com/campus/secondhand/
+│       ├── controller/   # REST 接口层
+│       ├── service/      # 业务逻辑层
+│       ├── entity/       # 数据实体
+│       ├── mapper/       # MyBatis-Plus Mapper
+│       ├── config/       # 配置（JWT/WebSocket/MVC）
+│       └── common/       # 统一响应/异常处理
+├── frontend/             # Vue 3 前端
+│   └── src/
+│       ├── views/        # 页面组件
+│       ├── components/   # 通用组件
+│       ├── api/          # 接口封装
+│       ├── stores/       # Pinia 状态管理
+│       ├── router/       # 路由配置
+│       └── utils/        # 工具函数
+├── sql/                  # 数据库脚本
+├── docs/                 # 设计文档
+└── README.md
+```
+
+## License
+
+[MIT](LICENSE)
